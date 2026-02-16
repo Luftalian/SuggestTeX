@@ -5,15 +5,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --break-system-packages --default-timeout=120 sympy antlr4-python3-runtime==4.11.1
+RUN pip3 install --break-system-packages --no-cache-dir --default-timeout=120 \
+    sympy==1.14.0 antlr4-python3-runtime==4.11.1
 
 WORKDIR /workspace
 
 COPY package.json package-lock.json ./
-RUN npm install
+RUN npm ci
 
 COPY . .
 
 RUN npm run compile
+
+RUN useradd -m appuser
+USER appuser
 
 CMD ["node", "out/test/runTest.js"]

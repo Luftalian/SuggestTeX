@@ -90,20 +90,22 @@ function spawnPython(scriptPath: string): Promise<void> {
 			});
 
 			proc.on('error', (err) => {
-				if (!settled && fallback) {
-					trySpawn(fallback);
-				} else if (!settled) {
+				if (!settled) {
 					settled = true;
-					reject(new Error(`Failed to start Python: ${err.message}`));
+					if (fallback) {
+						trySpawn(fallback);
+					} else {
+						reject(new Error(`Failed to start Python: ${err.message}`));
+					}
 				}
 			});
 
 			proc.on('close', (code) => {
 				if (!settled) {
+					settled = true;
 					if (fallback) {
 						trySpawn(fallback);
 					} else {
-						settled = true;
 						reject(new Error(`Python process exited with code ${code}`));
 					}
 				} else {
@@ -177,9 +179,12 @@ export async function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
+	for (const [, pending] of pendingRequests) {
+		pending.reject(new Error('Extension deactivating'));
+	}
+	pendingRequests.clear();
 	if (pythonProcess) {
 		pythonProcess.kill();
 		pythonProcess = null;
 	}
-	pendingRequests.clear();
 }

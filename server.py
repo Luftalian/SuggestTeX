@@ -20,6 +20,12 @@ def main():
             data = json.loads(line)
         except json.JSONDecodeError as e:
             print(f"Invalid JSON: {e}", file=sys.stderr)
+            send_response({"id": None, "error": f"Invalid JSON: {e}"})
+            continue
+
+        if not isinstance(data, dict):
+            print(f"Expected JSON object, got {type(data).__name__}", file=sys.stderr)
+            send_response({"id": None, "error": "Expected JSON object"})
             continue
 
         req_id = data.get("id")
