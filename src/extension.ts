@@ -108,8 +108,8 @@ function spawnPython(scriptPath: string): Promise<void> {
 					} else {
 						reject(new Error(`Python process exited with code ${code}`));
 					}
-				} else {
-					// Process exited after startup
+				} else if (proc === pythonProcess) {
+					// Only clear if this is the active process (not a failed primary spawn)
 					pythonProcess = null;
 					for (const [id, pending] of pendingRequests) {
 						pending.reject(new Error('Python process exited'));
