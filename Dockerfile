@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --break-system-packages --no-cache-dir --default-timeout=120 \
-    sympy==1.14.0 antlr4-python3-runtime==4.11.1
+    sympy==1.14.0 antlr4-python3-runtime==4.11.1 pytest==8.3.4
 
 WORKDIR /workspace
 
