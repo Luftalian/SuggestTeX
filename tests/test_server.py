@@ -969,3 +969,452 @@ class TestEdgeCaseFailures:
 class TestDoubleFactorial:
     def test_double_factorial(self, server):
         assert_pass(server, "(n-1)!!")
+
+
+# ===================================================================
+# NEW PASSING TESTS — Round 2/3 findings
+# ===================================================================
+
+
+class TestAMSMiscSymbols:
+    """AMS miscellaneous symbols handled as atomic symbols."""
+
+    def test_ell(self, server):
+        assert_pass(server, "\\ell")
+
+    def test_mho(self, server):
+        assert_pass(server, "\\mho")
+
+    def test_complement(self, server):
+        assert_pass(server, "\\complement")
+
+    def test_nexists(self, server):
+        assert_pass(server, "\\nexists")
+
+    def test_eth(self, server):
+        assert_pass(server, "\\eth")
+
+    def test_hslash(self, server):
+        assert_pass(server, "\\hslash")
+
+    def test_measuredangle(self, server):
+        assert_pass(server, "\\measuredangle")
+
+    def test_backprime(self, server):
+        assert_pass(server, "\\backprime")
+
+
+class TestAMSSymbOperators:
+    """AMS symbolic operators treated as atomic symbols."""
+
+    def test_blacksquare(self, server):
+        assert_pass(server, "\\blacksquare")
+
+    def test_square(self, server):
+        assert_pass(server, "\\square")
+
+    def test_lozenge(self, server):
+        assert_pass(server, "\\lozenge")
+
+    def test_bigstar(self, server):
+        assert_pass(server, "\\bigstar")
+
+    def test_dotplus(self, server):
+        assert_pass(server, "\\dotplus")
+
+    def test_ltimes(self, server):
+        assert_pass(server, "\\ltimes")
+
+    def test_rtimes(self, server):
+        assert_pass(server, "\\rtimes")
+
+    def test_barwedge(self, server):
+        assert_pass(server, "\\barwedge")
+
+    def test_intercal(self, server):
+        assert_pass(server, "\\intercal")
+
+    def test_divideontimes(self, server):
+        assert_pass(server, "\\divideontimes")
+
+    def test_therefore(self, server):
+        assert_pass(server, "\\therefore")
+
+    def test_because(self, server):
+        assert_pass(server, "\\because")
+
+
+class TestPrimeNotation:
+    """Prime/derivative notation."""
+
+    def test_first_derivative(self, server):
+        assert_pass(server, "f'(x)")
+
+    def test_second_derivative_prime(self, server):
+        assert_pass(server, "f''(x)")
+
+    def test_product_rule(self, server):
+        assert_pass(server, "a'b+ab'")
+
+    def test_double_prime_subscript(self, server):
+        assert_pass(server, "y''_1")
+
+    def test_prime_function_subscript(self, server):
+        assert_pass(server, "f'_1(x)")
+
+
+class TestLimitsPlacement:
+    """\\limits and \\nolimits placement commands."""
+
+    @pytest.mark.xfail(reason="\\limits not supported by parse_latex")
+    def test_limits(self, server):
+        assert_pass(server, "\\sum\\limits_{i=1}^{n} i")
+
+    @pytest.mark.xfail(reason="\\nolimits not supported by parse_latex")
+    def test_nolimits(self, server):
+        assert_pass(server, "\\sum\\nolimits_{i=1}^{n} i")
+
+
+class TestDaggerNotation:
+    def test_dagger(self, server):
+        assert_pass(server, "A^{\\dagger}")
+
+
+class TestContinuedFraction:
+    """\\cfrac is preprocessed to \\frac."""
+
+    def test_cfrac_nested(self, server):
+        assert_pass(server, "\\cfrac{1}{2+\\cfrac{1}{3+\\cfrac{1}{4}}}")
+
+
+class TestExoticFunctionsPass:
+    """Exotic functions that parse_latex handles correctly."""
+
+    def test_digamma(self, server):
+        assert_pass(server, "\\psi(x)")
+
+    def test_beta_function_formula(self, server):
+        assert_pass(server, "B(x, y) = \\frac{\\Gamma(x)\\Gamma(y)}{\\Gamma(x+y)}")
+
+
+class TestQuadrupleDot:
+    def test_ddddot(self, server):
+        assert_pass(server, "\\ddddot{y}")
+
+
+class TestManualDoubleIntegral:
+    """Manual spacing for double integrals (spacing stripped in preprocessing)."""
+
+    def test_manual_double_integral(self, server):
+        assert_pass(server, "\\int\\!\\!\\!\\int f(x,y)\\,dx\\,dy")
+
+
+class TestEnvironmentFailuresNew:
+    """Additional environments not supported by parse_latex."""
+
+    @pytest.mark.xfail(reason="parse_latex does not support \\begin{array} with column spec")
+    def test_array(self, server):
+        assert_pass(server, "\\begin{array}{cc} 1 & 2 \\\\ 3 & 4 \\end{array}")
+
+    @pytest.mark.xfail(reason="parse_latex does not support \\begin{aligned}")
+    def test_aligned(self, server):
+        assert_pass(server, "\\begin{aligned} x &= 1 \\\\ y &= 2 \\end{aligned}")
+
+
+# ===================================================================
+# NEW EXPECTED FAILURES — Round 2/3 error findings
+# ===================================================================
+
+
+class TestEnvironmentFailures:
+    """Environments not supported by parse_latex."""
+
+    @pytest.mark.xfail(reason="parse_latex does not support \\begin{smallmatrix}")
+    def test_smallmatrix(self, server):
+        assert_pass(server, "\\left(\\begin{smallmatrix} a & b \\\\ c & d \\end{smallmatrix}\\right)")
+
+    @pytest.mark.xfail(reason="parse_latex does not support \\begin{gathered}")
+    def test_gathered(self, server):
+        assert_pass(server, "\\begin{gathered} x + y = 1 \\\\ x - y = 0 \\end{gathered}")
+
+
+class TestUnsupportedCommands:
+    """Commands that parse_latex rejects with an error."""
+
+    @pytest.mark.xfail(reason="\\wp with semicolons not supported")
+    def test_weierstrass_p_with_periods(self, server):
+        assert_pass(server, "\\wp(z; \\omega_1, \\omega_2)")
+
+    @pytest.mark.xfail(reason="comma in subscript not supported")
+    def test_mittag_leffler(self, server):
+        assert_pass(server, "E_{\\alpha,\\beta}(z)")
+
+    @pytest.mark.xfail(reason="\\cfrac[l] alignment option not supported")
+    def test_cfrac_left_aligned(self, server):
+        assert_pass(server, "\\cfrac[l]{a}{b+c}")
+
+    @pytest.mark.xfail(reason="\\cfrac[r] alignment option not supported")
+    def test_cfrac_right_aligned(self, server):
+        assert_pass(server, "\\cfrac[r]{a}{b+c}")
+
+    @pytest.mark.xfail(reason="\\colorbox not supported")
+    def test_colorbox(self, server):
+        assert_pass(server, "\\colorbox{yellow}{$E=mc^2$}")
+
+    def test_text_differential(self, server):
+        assert_pass(server, "\\text{d}x")
+
+    def test_bra_notation(self, server):
+        assert_pass(server, "\\left\\langle a\\right|")
+
+    def test_triple_dot(self, server):
+        assert_pass(server, "\\dddot{x}")
+
+    def test_shorthand_frac(self, server):
+        assert_pass(server, "\\frac12")
+
+    @pytest.mark.xfail(reason="inequality chain not supported")
+    def test_inequality_chain(self, server):
+        assert_pass(server, "-1 \\leq x < 1")
+
+    @pytest.mark.xfail(reason="\\sum with \\mid divisor condition errors")
+    def test_sum_divisor(self, server):
+        assert_pass(server, "\\sum\\limits_{d \\mid n} d^2")
+
+
+class TestLargeFactorial:
+    def test_factorial_product(self, server):
+        assert_pass(server, "24! \\times 24!")
+
+
+# ===================================================================
+# SUSPECT TESTS — commands silently parsed as variable names
+# These are the most dangerous failures: no error is raised but the
+# result is semantically wrong.
+# ===================================================================
+
+
+class TestOperatornameAsVariable:
+    """\\operatorname{...} is silently parsed as variable multiplication."""
+
+    @pytest.mark.xfail(reason="\\operatorname parsed as variable, not operator")
+    def test_operatorname_res(self, server):
+        resp = server.evaluate("\\operatorname{Res}_{z=0} f(z)")
+        assert "operatorname" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\operatorname parsed as variable, not operator")
+    def test_operatorname_span(self, server):
+        resp = server.evaluate("\\operatorname{span}\\{v_1, v_2\\}")
+        assert "operatorname" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\operatorname parsed as variable, not operator")
+    def test_operatorname_hom(self, server):
+        resp = server.evaluate("\\operatorname{Hom}(V, W)")
+        assert "operatorname" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\operatorname* parsed as variable")
+    def test_operatorname_star_argmax(self, server):
+        resp = server.evaluate("\\operatorname*{arg\\,max}_{x \\in S} f(x)")
+        assert "operatorname" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\operatorname{Li} parsed as variable")
+    def test_operatorname_dilogarithm(self, server):
+        resp = server.evaluate("\\operatorname{Li}_2(z)")
+        assert "operatorname" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\operatorname{erfc} parsed as variable")
+    def test_operatorname_erfc(self, server):
+        resp = server.evaluate("\\operatorname{erfc}(x)")
+        assert "operatorname" not in resp.get("expression", "")
+
+
+class TestMathFontAsVariable:
+    """Math font commands silently parsed as variable multiplication."""
+
+    @pytest.mark.xfail(reason="\\mathcal parsed as variable")
+    def test_mathcal_laplace(self, server):
+        resp = server.evaluate("\\mathcal{L}\\{f(t)\\}")
+        assert "mathcal" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\mathcal parsed as variable")
+    def test_mathcal_fourier(self, server):
+        resp = server.evaluate("\\mathcal{F}\\{f(t)\\}")
+        assert "mathcal" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\mathfrak parsed as variable")
+    def test_mathfrak_su2(self, server):
+        resp = server.evaluate("\\mathfrak{su}(2)")
+        assert "mathfrak" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\mathfrak parsed as variable")
+    def test_mathfrak_sl(self, server):
+        resp = server.evaluate("\\mathfrak{sl}(n, \\mathbb{R})")
+        assert "mathfrak" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\mathscr parsed as variable")
+    def test_mathscr(self, server):
+        resp = server.evaluate("\\mathscr{H}")
+        assert "mathscr" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\mathrm parsed as variable")
+    def test_mathrm_differential(self, server):
+        resp = server.evaluate("\\mathrm{d}x")
+        assert "mathrm" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\boldsymbol parsed as variable")
+    def test_boldsymbol_nabla(self, server):
+        resp = server.evaluate("\\boldsymbol{\\nabla} \\times \\mathbf{F}")
+        assert "boldsymbol" not in resp.get("expression", "")
+
+
+class TestBraceDecorAsVariable:
+    """Brace decoration commands silently parsed as variable multiplication."""
+
+    @pytest.mark.xfail(reason="\\overbrace parsed as variable")
+    def test_overbrace(self, server):
+        resp = server.evaluate("\\overbrace{a + b + c}^{\\text{sum}}")
+        assert "overbrace" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\underbrace parsed as variable")
+    def test_underbrace(self, server):
+        resp = server.evaluate("\\underbrace{x_1 + x_2 + \\cdots + x_n}_{n \\text{ terms}}")
+        assert "underbrace" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\stackrel parsed as variable")
+    def test_stackrel(self, server):
+        resp = server.evaluate("\\stackrel{\\text{def}}{=}")
+        assert "stackrel" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\xleftarrow parsed as variable")
+    def test_xleftarrow(self, server):
+        resp = server.evaluate("\\xleftarrow{n+1}")
+        assert "xleftarrow" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\xrightarrow parsed as variable")
+    def test_xrightarrow(self, server):
+        resp = server.evaluate("\\xrightarrow[T]{n \\pm 1}")
+        assert "xrightarrow" not in resp.get("expression", "")
+
+
+class TestCancelAsVariable:
+    """Cancel commands silently parsed as variable multiplication."""
+
+    @pytest.mark.xfail(reason="\\bcancel parsed as variable")
+    def test_bcancel(self, server):
+        resp = server.evaluate("\\bcancel{x}")
+        assert "bcancel" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\xcancel parsed as variable")
+    def test_xcancel(self, server):
+        resp = server.evaluate("\\xcancel{x}")
+        assert "xcancel" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\cancelto parsed as variable")
+    def test_cancelto(self, server):
+        resp = server.evaluate("\\cancelto{0}{x^2 + 1}")
+        assert "cancelto" not in resp.get("expression", "")
+
+
+class TestPhantomAsVariable:
+    """Phantom/smash commands silently parsed as variable multiplication."""
+
+    @pytest.mark.xfail(reason="\\vphantom parsed as variable")
+    def test_vphantom(self, server):
+        resp = server.evaluate("\\vphantom{\\frac{a}{b}}")
+        assert "vphantom" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\hphantom parsed as variable")
+    def test_hphantom(self, server):
+        resp = server.evaluate("\\hphantom{xyz}")
+        assert "hphantom" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\smash[b] parsed as variable")
+    def test_smash_bottom(self, server):
+        resp = server.evaluate("\\smash[b]{\\frac{a}{b}}")
+        assert "smash" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\smash[t] parsed as variable")
+    def test_smash_top(self, server):
+        resp = server.evaluate("\\smash[t]{\\sum_{i=1}^{n}}")
+        assert "smash" not in resp.get("expression", "")
+
+
+class TestSidesetAsVariable:
+    """\\sideset silently parsed as variable."""
+
+    @pytest.mark.xfail(reason="\\sideset parsed as variable")
+    def test_sideset(self, server):
+        resp = server.evaluate("\\sideset{_a^b}{_c^d}\\sum")
+        assert "sideset" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\sideset parsed as variable")
+    def test_sideset_prime(self, server):
+        resp = server.evaluate("\\sideset{}{'}\\sum_{k}")
+        assert "sideset" not in resp.get("expression", "")
+
+
+class TestColorAsVariable:
+    """Color commands silently parsed as variable multiplication."""
+
+    @pytest.mark.xfail(reason="\\textcolor parsed as variable")
+    def test_textcolor(self, server):
+        resp = server.evaluate("\\textcolor{red}{x^2}")
+        assert "textcolor" not in resp.get("expression", "")
+
+
+class TestEquationTagAsVariable:
+    """Equation tag commands silently parsed as variable."""
+
+    @pytest.mark.xfail(reason="\\tag parsed as variable")
+    def test_tag(self, server):
+        resp = server.evaluate("\\tag{*} x = 1")
+        assert "tag" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\notag parsed as variable")
+    def test_notag(self, server):
+        resp = server.evaluate("\\notag")
+        assert "notag" not in resp.get("expression", "")
+
+
+class TestMultipleIntegralsAsVariable:
+    """Multiple integral commands silently parsed as variable."""
+
+    @pytest.mark.xfail(reason="\\iint parsed as variable")
+    def test_double_integral(self, server):
+        resp = server.evaluate("\\iint_D f(x,y) \\, dA")
+        assert "iint" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\iiint parsed as variable")
+    def test_triple_integral(self, server):
+        resp = server.evaluate("\\iiint_V f \\, dV")
+        assert "iiint" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\oint parsed as variable")
+    def test_contour_integral(self, server):
+        resp = server.evaluate("\\oint_C f \\, dz")
+        assert "oint" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\iiiint parsed as variable")
+    def test_quadruple_integral(self, server):
+        resp = server.evaluate("\\iiiint f\\,dV")
+        assert "iiiint" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\idotsint parsed as variable")
+    def test_idotsint(self, server):
+        resp = server.evaluate("\\idotsint f(x_1,\\ldots,x_n)\\,dx_1 \\cdots dx_n")
+        assert "idotsint" not in resp.get("expression", "")
+
+
+class TestSiunitxAsVariable:
+    """siunitx commands silently parsed as variable multiplication."""
+
+    @pytest.mark.xfail(reason="\\SI parsed as variable multiplication")
+    def test_si_unit(self, server):
+        resp = server.evaluate("\\SI{9.81}{m/s^2}")
+        expr = resp.get("expression", "")
+        assert "SI" not in expr and "S*I" not in expr
+
+    @pytest.mark.xfail(reason="\\num parsed as variable")
+    def test_num_formatting(self, server):
+        resp = server.evaluate("\\num{1.23e10}")
+        assert "num" not in resp.get("expression", "")
