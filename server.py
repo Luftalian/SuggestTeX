@@ -1,4 +1,5 @@
 import json
+import re
 import sys
 from sympy.parsing.latex import parse_latex
 
@@ -6,6 +7,55 @@ from sympy.parsing.latex import parse_latex
 def send_response(data):
     sys.stdout.write(json.dumps(data) + "\n")
     sys.stdout.flush()
+
+
+def preprocess_latex(expr: str) -> str:
+    """Normalize LaTeX before passing to parse_latex.
+
+    Handles common notation that parse_latex does not support natively:
+    math-mode delimiters, spacing commands, ``\\left``/``\\right`` sizing,
+    ``\\cfrac``, and empty leading groups.
+    """
+    # 1. Strip math-mode delimiters: $$...$$, $...$, \(...\)
+    if expr.startswith("$$") and expr.endswith("$$"):
+        expr = expr[2:-2]
+    elif expr.startswith("$") and expr.endswith("$"):
+        expr = expr[1:-1]
+    elif expr.startswith("\\(") and expr.endswith("\\)"):
+        expr = expr[2:-2]
+
+    # 2. Strip spacing commands
+    expr = re.sub(r"\\[,;:!]", "", expr)
+    expr = re.sub(r"\\quad\b", " ", expr)
+    expr = re.sub(r"\\qquad\b", " ", expr)
+    expr = expr.replace("\\ ", " ")
+
+    # 3. Normalize \left/\right delimiters
+    # \left\| ... \right\|  →  | ... |  (treat scalar norm as abs)
+    expr = re.sub(r"\\left\\\|", "|", expr)
+    expr = re.sub(r"\\right\\\|", "|", expr)
+    # \left| ... \right|  →  | ... |
+    expr = expr.replace("\\left|", "|")
+    expr = expr.replace("\\right|", "|")
+    # \left. (invisible delimiter) → remove
+    expr = expr.replace("\\left.", "")
+    # \left( → ( ,  \right) → )
+    expr = expr.replace("\\left(", "(")
+    expr = expr.replace("\\right)", ")")
+    # \left[ → [ ,  \right] → ]
+    expr = expr.replace("\\left[", "[")
+    expr = expr.replace("\\right]", "]")
+    # \left\{ → { ,  \right\} → }
+    expr = expr.replace("\\left\\{", "\\{")
+    expr = expr.replace("\\right\\}", "\\}")
+
+    # 4. Strip empty leading groups:  {}_x → _x ,  {}^x → ^x
+    expr = re.sub(r"\{\}(?=[_^])", "", expr)
+
+    # 5. \cfrac → \frac
+    expr = expr.replace("\\cfrac", "\\frac")
+
+    return expr.strip()
 
 
 def main():
@@ -33,7 +83,9 @@ def main():
         print(f"Request {req_id}: {expression}", file=sys.stderr)
 
         try:
-            expr = parse_latex(expression)
+            preprocessed = preprocess_latex(expression)
+            print(f"Preprocessed: {preprocessed}", file=sys.stderr)
+            expr = parse_latex(preprocessed)
             result = expr.evalf()
             print(f"Parsed: {expr} = {result}", file=sys.stderr)
             send_response({"id": req_id, "result": str(result), "expression": str(expr)})

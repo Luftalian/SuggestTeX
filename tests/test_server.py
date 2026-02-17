@@ -872,7 +872,6 @@ class TestStandaloneArrows:
 
 
 class TestDelimiterFailures:
-    @pytest.mark.xfail(reason="\\left. \\right| evaluated-at notation not supported")
     def test_evaluated_at(self, server):
         assert_pass(server, "\\left. \\frac{d}{dx} f(x) \\right|_{x=a}")
 
@@ -884,11 +883,9 @@ class TestDelimiterFailures:
     def test_set_builder(self, server):
         assert_pass(server, "\\left\\{ x \\in \\mathbb{R} : x > 0 \\right\\}")
 
-    @pytest.mark.xfail(reason="\\left| \\right| absolute value not supported")
     def test_left_right_abs(self, server):
         assert_pass(server, "\\left| x \\right|")
 
-    @pytest.mark.xfail(reason="\\left\\| \\right\\| norm not supported")
     def test_left_right_norm(self, server):
         assert_pass(server, "\\left\\| x \\right\\|")
 
@@ -921,8 +918,7 @@ class TestStackNotationFailure:
         assert_pass(server, "\\overset{?}{=}")
 
 
-class TestSpacingFailure:
-    @pytest.mark.xfail(reason="backslash-space not supported")
+class TestSpacingFixed:
     def test_backslash_space(self, server):
         assert_pass(server, "x\\ y")
 
@@ -960,15 +956,12 @@ class TestEdgeCaseFailures:
     def test_double_backslash(self, server):
         assert_pass(server, "\\\\")
 
-    @pytest.mark.xfail(reason="display math delimiters should be stripped")
     def test_display_math(self, server):
         assert_pass(server, "$$x$$")
 
-    @pytest.mark.xfail(reason="inline math delimiters should be stripped")
     def test_inline_math(self, server):
         assert_pass(server, "$x$")
 
-    @pytest.mark.xfail(reason="paren math delimiters should be stripped")
     def test_paren_math(self, server):
         assert_pass(server, "\\(x\\)")
 
