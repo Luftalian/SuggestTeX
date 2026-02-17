@@ -16,6 +16,9 @@ def preprocess_latex(expr: str) -> str:
     math-mode delimiters, spacing commands, ``\\left``/``\\right`` sizing,
     ``\\cfrac``, and empty leading groups.
     """
+    # 0. Trim whitespace so delimiter checks work on padded input
+    expr = expr.strip()
+
     # 1. Strip math-mode delimiters: $$...$$, $...$, \(...\)
     if expr.startswith("$$") and expr.endswith("$$"):
         expr = expr[2:-2]
@@ -24,28 +27,29 @@ def preprocess_latex(expr: str) -> str:
     elif expr.startswith("\\(") and expr.endswith("\\)"):
         expr = expr[2:-2]
 
-    # 2. Strip spacing commands
+    # 2. Strip spacing commands (but preserve \\ row separators)
     expr = re.sub(r"\\[,;:!]", "", expr)
     expr = re.sub(r"\\quad\b", " ", expr)
     expr = re.sub(r"\\qquad\b", " ", expr)
-    expr = expr.replace("\\ ", " ")
+    # Replace backslash-space, but not double-backslash-space (row separator)
+    expr = re.sub(r"(?<!\\)\\ ", " ", expr)
 
     # 3. Normalize \left/\right delimiters
     # \left\| ... \right\|  →  | ... |  (treat scalar norm as abs)
     expr = re.sub(r"\\left\\\|", "|", expr)
     expr = re.sub(r"\\right\\\|", "|", expr)
+    # \left. ... \right|  →  strip both (evaluated-at notation)
+    expr = re.sub(r"\\left\.", "", expr)
+    expr = re.sub(r"\\right\|", "|", expr)
     # \left| ... \right|  →  | ... |
     expr = expr.replace("\\left|", "|")
-    expr = expr.replace("\\right|", "|")
-    # \left. (invisible delimiter) → remove
-    expr = expr.replace("\\left.", "")
     # \left( → ( ,  \right) → )
     expr = expr.replace("\\left(", "(")
     expr = expr.replace("\\right)", ")")
     # \left[ → [ ,  \right] → ]
     expr = expr.replace("\\left[", "[")
     expr = expr.replace("\\right]", "]")
-    # \left\{ → { ,  \right\} → }
+    # \left\{ → \{ ,  \right\} → \}
     expr = expr.replace("\\left\\{", "\\{")
     expr = expr.replace("\\right\\}", "\\}")
 
