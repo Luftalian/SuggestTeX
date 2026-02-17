@@ -23,32 +23,47 @@ class ServerProcess:
     """Manages a running server.py process for testing."""
 
     def __init__(self):
+        self._id = 0
+        self._start_process()
+
+    def _start_process(self):
         self.proc = subprocess.Popen(
             [sys.executable, SERVER_PY],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
             text=True,
         )
         ready = self._read_line(timeout=10)
         assert ready is not None, "server.py did not produce output"
         msg = json.loads(ready)
         assert msg.get("status") == "ready", f"Expected ready, got: {ready}"
-        self._id = 0
 
     def evaluate(self, expression: str, timeout: float = 10) -> dict:
         """Send *expression* to the server and return the response dict."""
         self._id += 1
         req = json.dumps({"id": str(self._id), "expression": expression}) + "\n"
-        self.proc.stdin.write(req)
-        self.proc.stdin.flush()
+        try:
+            self.proc.stdin.write(req)
+            self.proc.stdin.flush()
+        except (BrokenPipeError, OSError):
+            self._restart()
+            self.proc.stdin.write(req)
+            self.proc.stdin.flush()
         line = self._read_line(timeout=timeout)
         if line is None:
-            # Timeout — kill and restart
-            self.proc.kill()
-            self.proc.wait()
+            self._restart()
             raise TimeoutError(f"server.py timed out on: {expression!r}")
         return json.loads(line)
+
+    def _restart(self):
+        """Kill the current process and start a fresh one."""
+        try:
+            self.proc.kill()
+            self.proc.wait(timeout=5)
+        except Exception:
+            pass
+        self._start_process()
 
     def close(self):
         try:
