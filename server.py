@@ -28,7 +28,7 @@ def preprocess_latex(expr: str) -> str:
         expr = expr[2:-2]
 
     # 2. Strip spacing commands (but preserve \\ row separators)
-    expr = re.sub(r"\\[,;:!]", "", expr)
+    expr = re.sub(r"\\[,;:!]", " ", expr)
     expr = re.sub(r"\\quad\b", " ", expr)
     expr = re.sub(r"\\qquad\b", " ", expr)
     # Replace backslash-space, but not double-backslash-space (row separator)
