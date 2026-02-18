@@ -28,9 +28,10 @@ def preprocess_latex(expr: str) -> str:
         expr = expr[2:-2]
 
     # 2. Strip spacing commands (but preserve \\ row separators)
-    expr = re.sub(r"\\[,;:!]", " ", expr)
-    expr = re.sub(r"\\quad\b", " ", expr)
-    expr = re.sub(r"\\qquad\b", " ", expr)
+    # Use negative lookbehind to avoid matching \\, \\; \\: \\! (row sep + spacing)
+    expr = re.sub(r"(?<!\\)\\[,;:!]", " ", expr)
+    expr = re.sub(r"(?<!\\)\\quad\b", " ", expr)
+    expr = re.sub(r"(?<!\\)\\qquad\b", " ", expr)
     # Replace backslash-space, but not double-backslash-space (row separator)
     expr = re.sub(r"(?<!\\)\\ ", " ", expr)
 
@@ -38,7 +39,9 @@ def preprocess_latex(expr: str) -> str:
     # \left\| ... \right\|  →  | ... |  (treat scalar norm as abs)
     expr = re.sub(r"\\left\\\|", "|", expr)
     expr = re.sub(r"\\right\\\|", "|", expr)
-    # \left. ... \right|  →  strip both (evaluated-at notation)
+    # \left. ... \right|_{...}  →  wrap in parens to preserve eval-at scope
+    expr = re.sub(r"\\left\.\s*(.+?)\\right\|", r"(\1)|", expr)
+    # Remaining standalone \left. or \right| (without matched pair)
     expr = re.sub(r"\\left\.", "", expr)
     expr = re.sub(r"\\right\|", "|", expr)
     # \left| ... \right|  →  | ... |
@@ -56,8 +59,8 @@ def preprocess_latex(expr: str) -> str:
     # 4. Strip empty leading groups:  {}_x → _x ,  {}^x → ^x
     expr = re.sub(r"\{\}(?=[_^])", "", expr)
 
-    # 5. \cfrac → \frac
-    expr = expr.replace("\\cfrac", "\\frac")
+    # 5. \cfrac → \frac (word boundary to avoid matching e.g. \dcfrac)
+    expr = re.sub(r"\\cfrac\b", r"\\frac", expr)
 
     return expr.strip()
 
