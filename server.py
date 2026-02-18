@@ -40,16 +40,15 @@ def preprocess_latex(expr: str) -> str:
     # \left\| ... \right\|  →  | ... |  (treat scalar norm as abs)
     expr = re.sub(r"\\left\\\|", "|", expr)
     expr = re.sub(r"\\right\\\|", "|", expr)
+    # Normalize \left| ... \right| (absolute value) BEFORE eval-at so the
+    # eval-at regex does not accidentally consume inner absolute-value bars.
+    expr = re.sub(r"\\left\|(.+?)\\right\|", r"|\1|", expr)
     # \left. ... \right|_{...}  →  wrap in parens to preserve eval-at scope
-    # Non-greedy (.+?) but require _ or ^ after \right| so we match the
-    # evaluation bar (not an inner absolute-value \right|), and each
-    # \left.\right| pair is matched independently.
-    expr = re.sub(r"\\left\.\s*(.+?)\\right\|(?=[_^])", r"(\1)|", expr)
+    # Allow optional whitespace before _ or ^ in the lookahead.
+    expr = re.sub(r"\\left\.\s*(.+?)\\right\|\s*(?=[_^])", r"(\1)|", expr)
     # Remaining standalone \left. or \right| (without matched pair)
     expr = re.sub(r"\\left\.", "", expr)
     expr = re.sub(r"\\right\|", "|", expr)
-    # \left| ... \right|  →  | ... |
-    expr = expr.replace("\\left|", "|")
     # \left( → ( ,  \right) → )
     expr = expr.replace("\\left(", "(")
     expr = expr.replace("\\right)", ")")
