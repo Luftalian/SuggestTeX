@@ -20,9 +20,10 @@ def preprocess_latex(expr: str) -> str:
     expr = expr.strip()
 
     # 1. Strip math-mode delimiters: $$...$$, $...$, \(...\)
-    if expr.startswith("$$") and expr.endswith("$$"):
+    #    Only strip when the entire input is a single wrapped block.
+    if expr.startswith("$$") and expr.endswith("$$") and "$$" not in expr[2:-2]:
         expr = expr[2:-2]
-    elif expr.startswith("$") and expr.endswith("$"):
+    elif expr.startswith("$") and expr.endswith("$") and "$" not in expr[1:-1]:
         expr = expr[1:-1]
     elif expr.startswith("\\(") and expr.endswith("\\)"):
         expr = expr[2:-2]
@@ -40,7 +41,8 @@ def preprocess_latex(expr: str) -> str:
     expr = re.sub(r"\\left\\\|", "|", expr)
     expr = re.sub(r"\\right\\\|", "|", expr)
     # \left. ... \right|_{...}  →  wrap in parens to preserve eval-at scope
-    expr = re.sub(r"\\left\.\s*(.+?)\\right\|", r"(\1)|", expr)
+    # Use greedy (.+) to match the *outermost* \right| (handles nested |x|)
+    expr = re.sub(r"\\left\.\s*(.+)\\right\|", r"(\1)|", expr)
     # Remaining standalone \left. or \right| (without matched pair)
     expr = re.sub(r"\\left\.", "", expr)
     expr = re.sub(r"\\right\|", "|", expr)
@@ -59,8 +61,8 @@ def preprocess_latex(expr: str) -> str:
     # 4. Strip empty leading groups:  {}_x → _x ,  {}^x → ^x
     expr = re.sub(r"\{\}(?=[_^])", "", expr)
 
-    # 5. \cfrac → \frac (word boundary to avoid matching e.g. \dcfrac)
-    expr = re.sub(r"\\cfrac\b", r"\\frac", expr)
+    # 5. \cfrac → \frac (lookahead for { or digit to avoid matching e.g. \dcfrac)
+    expr = re.sub(r"\\cfrac(?=[{\d\[])", r"\\frac", expr)
 
     return expr.strip()
 
