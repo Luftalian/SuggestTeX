@@ -42,7 +42,16 @@ def preprocess_latex(expr: str) -> str:
     expr = re.sub(r"\\right\\\|", "|", expr)
     # Normalize \left| ... \right| (absolute value) BEFORE eval-at so the
     # eval-at regex does not accidentally consume inner absolute-value bars.
-    expr = re.sub(r"\\left\|(.+?)\\right\|", r"|\1|", expr)
+    # Use a tempered greedy token to match innermost pairs first, then loop
+    # outward so nested absolute values like \left|\left|x\right|+1\right|
+    # resolve correctly to ||x|+1|.
+    _abs_inner = re.compile(
+        r"\\left\|((?:(?!\\left\||\\right\|).)+)\\right\|"
+    )
+    prev = None
+    while prev != expr:
+        prev = expr
+        expr = _abs_inner.sub(r"|\1|", expr)
     # \left. ... \right|_{...}  →  wrap in parens to preserve eval-at scope
     # Allow optional whitespace before _ or ^ in the lookahead.
     expr = re.sub(r"\\left\.\s*(.+?)\\right\|\s*(?=[_^])", r"(\1)|", expr)
