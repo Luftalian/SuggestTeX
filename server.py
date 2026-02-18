@@ -25,7 +25,7 @@ def preprocess_latex(expr: str) -> str:
         expr = expr[2:-2]
     elif expr.startswith("$") and expr.endswith("$") and "$" not in expr[1:-1]:
         expr = expr[1:-1]
-    elif expr.startswith("\\(") and expr.endswith("\\)"):
+    elif expr.startswith("\\(") and expr.endswith("\\)") and "\\(" not in expr[2:-2]:
         expr = expr[2:-2]
 
     # 2. Strip spacing commands (but preserve \\ row separators)
@@ -41,8 +41,10 @@ def preprocess_latex(expr: str) -> str:
     expr = re.sub(r"\\left\\\|", "|", expr)
     expr = re.sub(r"\\right\\\|", "|", expr)
     # \left. ... \right|_{...}  →  wrap in parens to preserve eval-at scope
-    # Use greedy (.+) to match the *outermost* \right| (handles nested |x|)
-    expr = re.sub(r"\\left\.\s*(.+)\\right\|", r"(\1)|", expr)
+    # Non-greedy (.+?) but require _ or ^ after \right| so we match the
+    # evaluation bar (not an inner absolute-value \right|), and each
+    # \left.\right| pair is matched independently.
+    expr = re.sub(r"\\left\.\s*(.+?)\\right\|(?=[_^])", r"(\1)|", expr)
     # Remaining standalone \left. or \right| (without matched pair)
     expr = re.sub(r"\\left\.", "", expr)
     expr = re.sub(r"\\right\|", "|", expr)
