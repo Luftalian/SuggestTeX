@@ -54,7 +54,16 @@ def preprocess_latex(expr: str) -> str:
         expr = _abs_inner.sub(r"|\1|", expr)
     # \left. ... \right|_{...}  →  wrap in parens to preserve eval-at scope
     # Allow optional whitespace before _ or ^ in the lookahead.
-    expr = re.sub(r"\\left\.\s*(.+?)\\right\|\s*(?=[_^])", r"(\1)|", expr)
+    # Use balanced-brace matching so \right| inside \frac{}{} is not
+    # consumed prematurely (e.g. \left. \frac{\left. f \right|_a}{g}\right|_b).
+    _BRACE_BAL = (
+        r"(?:[^{}]|\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\})*?"
+    )
+    expr = re.sub(
+        r"\\left\.\s*(" + _BRACE_BAL + r")\\right\|\s*(?=[_^])",
+        r"(\1)|",
+        expr,
+    )
     # Remaining standalone \left. or \right| (without matched pair)
     expr = re.sub(r"\\left\.", "", expr)
     expr = re.sub(r"\\right\|", "|", expr)
