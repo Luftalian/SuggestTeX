@@ -1418,3 +1418,659 @@ class TestSiunitxAsVariable:
     def test_num_formatting(self, server):
         resp = server.evaluate("\\num{1.23e10}")
         assert "num" not in resp.get("expression", "")
+
+
+# ===================================================================
+# NEW PASSING TESTS — Round 4 agent team findings
+# ===================================================================
+
+
+class TestAdvancedIntegralsPass:
+    """Advanced integral expressions confirmed working."""
+
+    def test_gaussian_integral(self, server):
+        assert_pass(server, "\\int_{-\\infty}^{\\infty} e^{-x^2} \\, dx = \\sqrt{\\pi}")
+
+    def test_dirichlet_integral(self, server):
+        assert_pass(server, "\\int_0^{\\infty} \\frac{\\sin x}{x} \\, dx = \\frac{\\pi}{2}")
+
+    def test_convolution(self, server):
+        assert_pass(server, "\\int_{-\\infty}^{\\infty} f(\\tau) g(t - \\tau) \\, d\\tau")
+
+    def test_iterated_integral(self, server):
+        assert_pass(server, "\\int_0^1 \\int_0^x f(x,y) \\, dy \\, dx")
+
+    def test_polar_integral(self, server):
+        assert_pass(server, "\\int_0^{2\\pi} \\int_0^R f(r,\\theta) \\, r \\, dr \\, d\\theta")
+
+    def test_leibniz_integral_rule(self, server):
+        assert_pass(server, "\\frac{d}{dx} \\int_{a(x)}^{b(x)} f(x,t) \\, dt")
+
+    def test_dirac_delta_sifting(self, server):
+        assert_pass(server, "\\int_{-\\infty}^{\\infty} f(x) \\delta(x - a) \\, dx = f(a)")
+
+    def test_fresnel_integral(self, server):
+        assert_pass(server, "S(x) = \\int_0^x \\sin(t^2) \\, dt")
+
+    def test_arc_length(self, server):
+        assert_pass(server, "L = \\int_a^b \\sqrt{1 + (\\frac{dy}{dx})^2} \\, dx")
+
+    def test_gamma_integral(self, server):
+        assert_pass(server, "\\Gamma(z) = \\int_0^{\\infty} t^{z-1} e^{-t} \\, dt")
+
+
+class TestLinearAlgebraPass:
+    """Linear algebra expressions confirmed working."""
+
+    def test_characteristic_equation(self, server):
+        assert_pass(server, "\\det(A - \\lambda I) = 0")
+
+    def test_svd(self, server):
+        assert_pass(server, "A = U \\Sigma V^T")
+
+    def test_eigenvalue_max(self, server):
+        assert_pass(server, "\\lambda_{\\max}(A)")
+
+    def test_trace_via_sum(self, server):
+        assert_pass(server, "\\sum_{i=1}^{n} a_{ii}")
+
+    def test_det_product_eigenvalues(self, server):
+        assert_pass(server, "\\prod_{i=1}^{n} \\lambda_i")
+
+    def test_lu_decomposition(self, server):
+        assert_pass(server, "A = LU")
+
+    def test_qr_decomposition(self, server):
+        assert_pass(server, "A = QR")
+
+    def test_left_right_norm_to_abs(self, server):
+        assert_pass(server, "\\left\\| x \\right\\|")
+
+
+class TestNumberTheoryPass:
+    """Number theory expressions confirmed working."""
+
+    def test_catalan_number(self, server):
+        assert_pass(server, "C_n = \\frac{1}{n+1}\\binom{2n}{n}")
+
+    def test_binet_formula(self, server):
+        assert_pass(server, "F_n = \\frac{\\varphi^n - \\psi^n}{\\sqrt{5}}")
+
+    def test_liouville_function(self, server):
+        assert_pass(server, "\\lambda(n) = (-1)^{\\Omega(n)}")
+
+    def test_von_mangoldt(self, server):
+        assert_pass(server, "\\Lambda(n)")
+
+    def test_legendre_formula(self, server):
+        assert_pass(server, "\\sum_{i=1}^{\\infty} \\lfloor \\frac{n}{p^i} \\rfloor")
+
+    def test_nested_floor_ceiling(self, server):
+        assert_pass(server, "\\lceil \\lfloor x \\rfloor + 0.5 \\rceil")
+
+    def test_dirichlet_series(self, server):
+        assert_pass(server, "\\sum_{n=1}^{\\infty} \\frac{f(n)}{n^s}")
+
+    def test_bell_number(self, server):
+        assert_pass(server, "B_n = \\sum_{k=0}^{n} S(n,k)")
+
+    @pytest.mark.xfail(reason="symbolic binomial sum causes evaluation error")
+    def test_binomial_sum_with_powers(self, server):
+        assert_pass(server, "\\sum_{k=0}^{n} \\binom{n}{k} x^k")
+
+
+class TestProbabilityPass:
+    """Probability/statistics expressions confirmed working."""
+
+    def test_pr_function(self, server):
+        assert_pass(server, "\\Pr(A)")
+
+    def test_cdf_integral(self, server):
+        assert_pass(server, "F(x) = \\int_{-\\infty}^{x} f(u) \\, du")
+
+    def test_pdf_derivative(self, server):
+        assert_pass(server, "f(x) = \\frac{dF}{dx}")
+
+    def test_mean_integral(self, server):
+        assert_pass(server, "\\mu = \\int_{-\\infty}^{\\infty} x f(x) \\, dx")
+
+    def test_dbinom(self, server):
+        assert_pass(server, "\\dbinom{n}{k} p^k (1-p)^{n-k}")
+
+    def test_beta_function(self, server):
+        assert_pass(server, "B(\\alpha, \\beta) = \\frac{\\Gamma(\\alpha)\\Gamma(\\beta)}{\\Gamma(\\alpha+\\beta)}")
+
+    def test_poisson_pmf(self, server):
+        assert_pass(server, "\\frac{\\lambda^k e^{-\\lambda}}{k!}")
+
+    def test_exponential_pdf(self, server):
+        assert_pass(server, "f(x) = \\lambda e^{-\\lambda x}")
+
+
+class TestPhysicsEquationsPass:
+    """Physics equations confirmed working."""
+
+    def test_energy_momentum(self, server):
+        assert_pass(server, "E^2 = (pc)^2 + (mc^2)^2")
+
+    def test_de_broglie(self, server):
+        assert_pass(server, "\\lambda = \\frac{h}{p}")
+
+    def test_harmonic_oscillator(self, server):
+        assert_pass(server, "E_n = \\hbar \\omega (n + \\frac{1}{2})")
+
+    def test_coulomb_law(self, server):
+        assert_pass(server, "F = \\frac{1}{4\\pi \\epsilon_0} \\frac{q_1 q_2}{r^2}")
+
+    def test_maxwell_gauss(self, server):
+        assert_pass(server, "\\nabla \\cdot E = \\frac{\\rho}{\\epsilon_0}")
+
+    def test_schrodinger_time_indep(self, server):
+        assert_pass(server, "H \\psi = E \\psi")
+
+    def test_bohr_radius(self, server):
+        assert_pass(server, "a_0 = \\frac{4\\pi \\epsilon_0 \\hbar^2}{m_e e^2}")
+
+    def test_planck_einstein(self, server):
+        assert_pass(server, "E = h \\nu")
+
+    def test_ideal_gas(self, server):
+        assert_pass(server, "PV = nRT")
+
+    def test_fourier_transform(self, server):
+        assert_pass(server, "\\hat{f}(\\xi) = \\int_{-\\infty}^{\\infty} f(x) e^{-2\\pi i x \\xi} \\, dx")
+
+
+# ===================================================================
+# NEW ERROR FAILURES — Round 4 agent team findings
+# ===================================================================
+
+
+class TestLimsupLiminfFailure:
+    """\\limsup and \\liminf not recognized by parse_latex."""
+
+    @pytest.mark.xfail(reason="\\limsup not supported by parse_latex")
+    def test_limsup(self, server):
+        assert_pass(server, "\\limsup_{n \\to \\infty} a_n")
+
+    @pytest.mark.xfail(reason="\\liminf not supported by parse_latex")
+    def test_liminf(self, server):
+        assert_pass(server, "\\liminf_{n \\to \\infty} a_n")
+
+
+class TestIntegralLowerBoundOnlyFailure:
+    """Integrals with only a lower bound (no upper bound) fail."""
+
+    @pytest.mark.xfail(reason="\\int with only lower bound not supported")
+    def test_measure_integral(self, server):
+        assert_pass(server, "\\int_X f \\, d\\mu")
+
+    @pytest.mark.xfail(reason="\\int with only lower bound not supported")
+    def test_contour_integral_lower(self, server):
+        assert_pass(server, "\\int_C P \\, dx + Q \\, dy")
+
+    @pytest.mark.xfail(reason="\\int with only lower bound not supported")
+    def test_line_integral(self, server):
+        assert_pass(server, "\\int_\\gamma f(z) \\, dz")
+
+    @pytest.mark.xfail(reason="\\int_{\\mathbb{R}} missing upper bound")
+    def test_lebesgue_integral(self, server):
+        assert_pass(server, "\\int_{\\mathbb{R}} f(x) \\, d\\lambda(x)")
+
+
+class TestSumProdUnboundedFailure:
+    """\\sum and \\prod without explicit = bounds or with non-standard subscripts."""
+
+    @pytest.mark.xfail(reason="\\sum without any bounds not supported")
+    def test_sum_no_bounds(self, server):
+        assert_pass(server, "\\sum \\frac{(A-E)^2}{E}")
+
+    @pytest.mark.xfail(reason="\\sum with bare variable subscript not supported")
+    def test_sum_bare_subscript(self, server):
+        assert_pass(server, "\\sum_n a_n x^n")
+
+    @pytest.mark.xfail(reason="\\prod without bounds not supported")
+    def test_prod_no_bounds(self, server):
+        assert_pass(server, "\\prod f(x_i)")
+
+    @pytest.mark.xfail(reason="\\prod with bare variable subscript not supported")
+    def test_prod_bare_subscript(self, server):
+        assert_pass(server, "\\prod_p (1 - p^{-s})")
+
+    @pytest.mark.xfail(reason="\\sum_{d \\mid n} divisor condition not supported")
+    def test_sum_divisor_mid(self, server):
+        assert_pass(server, "\\sum_{d \\mid n} d")
+
+    @pytest.mark.xfail(reason="\\prod_{p \\mid n} divisor condition not supported")
+    def test_prod_divisor_mid(self, server):
+        assert_pass(server, "\\prod_{p \\mid n} p")
+
+    @pytest.mark.xfail(reason="\\sum_{d \\mid n} Mobius inversion not supported")
+    def test_mobius_inversion(self, server):
+        assert_pass(server, "\\sum_{d \\mid n} \\mu(d) f(\\frac{n}{d})")
+
+
+class TestSumInequalityBoundFailure:
+    """\\sum/\\prod with inequality or set membership bounds fail."""
+
+    @pytest.mark.xfail(reason="\\leq in sum subscript not supported")
+    def test_sum_leq_bound(self, server):
+        assert_pass(server, "\\sum_{p \\leq x} \\frac{1}{p}")
+
+    @pytest.mark.xfail(reason="\\in in sum subscript not supported")
+    def test_sum_set_membership(self, server):
+        assert_pass(server, "\\sum_{x \\in S} f(x)")
+
+    @pytest.mark.xfail(reason="\\in in prod subscript not supported")
+    def test_prod_set_membership(self, server):
+        assert_pass(server, "\\zeta(s) = \\prod_{p \\in \\mathbb{P}} \\frac{1}{1-p^{-s}}")
+
+    @pytest.mark.xfail(reason="\\text in prod subscript not supported")
+    def test_prod_text_condition(self, server):
+        assert_pass(server, "\\prod_{p \\text{ prime}} \\frac{1}{1 - p^{-s}}")
+
+    @pytest.mark.xfail(reason="\\sum_{x \\in \\mathcal{X}} not supported")
+    def test_entropy_sum(self, server):
+        assert_pass(server, "H(X) = -\\sum_{x \\in \\mathcal{X}} p(x) \\log p(x)")
+
+
+class TestCommutatorBracketFailure:
+    """Commutator brackets [A, B] with comma fail."""
+
+    @pytest.mark.xfail(reason="comma inside square brackets not supported")
+    def test_commutator_basic(self, server):
+        assert_pass(server, "[\\hat{x}, \\hat{p}] = i\\hbar")
+
+    @pytest.mark.xfail(reason="comma inside square brackets not supported")
+    def test_commutator_spin(self, server):
+        assert_pass(server, "[S_x, S_y] = i\\hbar S_z")
+
+    @pytest.mark.xfail(reason="comma inside curly braces not supported")
+    def test_anticommutator(self, server):
+        assert_pass(server, "\\{\\hat{a}, \\hat{a}^{\\dagger}\\} = 1")
+
+    @pytest.mark.xfail(reason="comma inside square brackets not supported")
+    def test_angular_momentum_commutator(self, server):
+        assert_pass(server, "[L_i, L_j] = i\\hbar\\epsilon_{ijk}L_k")
+
+
+class TestSemicolonInArgsFailure:
+    """Semicolons as argument separators fail."""
+
+    @pytest.mark.xfail(reason="semicolon in function args not supported")
+    def test_likelihood(self, server):
+        assert_pass(server, "L(\\theta) = \\prod_{i=1}^{n} f(x_i; \\theta)")
+
+    @pytest.mark.xfail(reason="semicolon in function args not supported")
+    def test_mutual_information(self, server):
+        assert_pass(server, "I(X;Y)")
+
+    @pytest.mark.xfail(reason="semicolon in Weibull PDF not supported")
+    def test_weibull_pdf(self, server):
+        assert_pass(server, "f(x;\\lambda,k) = \\frac{k}{\\lambda}\\left(\\frac{x}{\\lambda}\\right)^{k-1}")
+
+
+class TestBarSubscriptPass:
+    """Subscript after \\bar{} works."""
+
+    def test_bar_subscript(self, server):
+        assert_pass(server, "\\bar{X}_n")
+
+
+class TestBareDerivativeFailure:
+    """Bare derivative operators without operand fail."""
+
+    @pytest.mark.xfail(reason="bare derivative operator without operand fails")
+    def test_momentum_operator(self, server):
+        assert_pass(server, "\\hat{p} = -i\\hbar\\frac{\\partial}{\\partial x}")
+
+    @pytest.mark.xfail(reason="bare derivative operator without operand fails")
+    def test_angular_momentum_operator(self, server):
+        assert_pass(server, "L_z = -i\\hbar\\frac{\\partial}{\\partial \\varphi}")
+
+
+class TestMultinomialBinomFailure:
+    """Multinomial \\binom with commas in second argument fails."""
+
+    @pytest.mark.xfail(reason="comma in \\binom second argument not supported")
+    def test_multinomial_binom(self, server):
+        assert_pass(server, "\\binom{n}{k_1, k_2, k_3}")
+
+
+class TestCommaTupleFailure:
+    """Comma-separated tuples inside parentheses fail."""
+
+    @pytest.mark.xfail(reason="multivariate limit tuple not supported")
+    def test_multivariate_limit(self, server):
+        assert_pass(server, "\\lim_{(x,y) \\to (0,0)} \\frac{xy}{x^2 + y^2}")
+
+    @pytest.mark.xfail(reason="comma tuple in \\left(\\right) not supported")
+    def test_confidence_interval(self, server):
+        assert_pass(server, "\\left(\\bar{x} - z\\frac{s}{\\sqrt{n}}, \\bar{x} + z\\frac{s}{\\sqrt{n}}\\right)")
+
+    @pytest.mark.xfail(reason="four-momentum tuple not supported")
+    def test_four_momentum(self, server):
+        assert_pass(server, "p^{\\mu} = (E/c, \\vec{p})")
+
+    @pytest.mark.xfail(reason="\\langle with comma not supported")
+    def test_inner_product_comma(self, server):
+        assert_pass(server, "\\langle x, y \\rangle")
+
+
+class TestPipeInFracFailure:
+    """Pipe | inside \\frac{} confuses parser."""
+
+    @pytest.mark.xfail(reason="| inside \\frac numerator confuses parser")
+    def test_bayes_pipe_in_frac(self, server):
+        assert_pass(server, "\\frac{P(B|A)P(A)}{P(B)}")
+
+
+class TestCommaInSubscriptFailure:
+    """Comma inside subscripts fails."""
+
+    @pytest.mark.xfail(reason="comma in subscript not supported")
+    def test_correlation_subscript(self, server):
+        assert_pass(server, "\\rho_{X,Y}")
+
+
+class TestPartitionFunctionFailure:
+    """Partition function Z = \\sum_n without = bound."""
+
+    @pytest.mark.xfail(reason="\\sum_{n} without = bound not supported")
+    def test_partition_function(self, server):
+        assert_pass(server, "Z = \\sum_{n} e^{-\\beta E_n}")
+
+
+class TestNormBareFailure:
+    """Bare \\| norm notation (without \\left/\\right)."""
+
+    @pytest.mark.xfail(reason="\\| norm notation not recognized")
+    def test_norm_bare(self, server):
+        assert_pass(server, "\\|x\\|")
+
+    @pytest.mark.xfail(reason="\\| with subscript not recognized")
+    def test_norm_frobenius(self, server):
+        assert_pass(server, "\\|A\\|_F")
+
+    @pytest.mark.xfail(reason="\\| L2 norm not recognized")
+    def test_norm_l2(self, server):
+        assert_pass(server, "\\|x\\|_2")
+
+
+class TestKLDivergenceFailure:
+    """KL divergence with \\| inside parens."""
+
+    @pytest.mark.xfail(reason="\\| inside parens fails")
+    def test_kl_divergence(self, server):
+        assert_pass(server, "D_{KL}(P \\| Q)")
+
+
+# ===================================================================
+# NEW SUSPECT TESTS — Round 4 agent team findings
+# Commands silently parsed as variable names or producing wrong results.
+# ===================================================================
+
+
+class TestNablaAsVariable:
+    """\\nabla silently parsed as variable, not differential operator."""
+
+    @pytest.mark.xfail(reason="\\nabla parsed as variable, not gradient operator")
+    def test_gradient(self, server):
+        resp = server.evaluate("\\nabla f")
+        assert "nabla" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\nabla parsed as variable in divergence")
+    def test_divergence(self, server):
+        resp = server.evaluate("\\nabla \\cdot \\vec{F}")
+        assert "nabla" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\nabla^2 parsed as variable squared")
+    def test_laplacian(self, server):
+        resp = server.evaluate("\\nabla^2 f")
+        assert "nabla" not in resp.get("expression", "")
+
+
+class TestConditionalProbTruncation:
+    """Pipe | in conditional probability causes expression truncation."""
+
+    @pytest.mark.xfail(reason="P(A|B) pipe truncates to just P")
+    def test_conditional_prob_pipe(self, server):
+        resp = server.evaluate("P(A|B)")
+        expr = resp.get("expression", "")
+        assert "A" in expr and "B" in expr
+
+    @pytest.mark.xfail(reason="P(X \\leq x) inequality inside P() loses args")
+    def test_prob_inequality(self, server):
+        resp = server.evaluate("P(X \\leq x)")
+        expr = resp.get("expression", "")
+        assert "X" in expr
+
+    @pytest.mark.xfail(reason="H(X|Y) pipe truncates conditional entropy")
+    def test_conditional_entropy(self, server):
+        resp = server.evaluate("H(X|Y)")
+        expr = resp.get("expression", "")
+        assert "X" in expr and "Y" in expr
+
+    @pytest.mark.xfail(reason="E[\\delta(T)|T] pipe in E[] truncates")
+    def test_conditional_expectation(self, server):
+        resp = server.evaluate("E[\\delta(T)|T]")
+        expr = resp.get("expression", "")
+        assert "delta" in expr.lower() or "Delta" in expr
+
+
+class TestTextFunctionAsVariable:
+    """\\text{func} decomposed into letter multiplication."""
+
+    @pytest.mark.xfail(reason="\\text{Var} decomposed into V*a*r")
+    def test_text_var(self, server):
+        resp = server.evaluate("\\text{Var}(X)")
+        assert "text" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\text{Cov} decomposed into letter multiplication")
+    def test_text_cov(self, server):
+        resp = server.evaluate("\\text{Cov}(X, Y)")
+        assert "text" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\text{lcm} decomposed into letter multiplication")
+    def test_text_lcm(self, server):
+        resp = server.evaluate("\\text{lcm}(a,b)")
+        assert "text" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\mathrm{tr} decomposed into t*r")
+    def test_mathrm_trace(self, server):
+        resp = server.evaluate("\\mathrm{tr}(A)")
+        assert "mathrm" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\operatorname{tr} decomposed")
+    def test_operatorname_trace(self, server):
+        resp = server.evaluate("\\operatorname{tr}(A)")
+        assert "operatorname" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\operatorname{rank} decomposed")
+    def test_operatorname_rank(self, server):
+        resp = server.evaluate("\\operatorname{rank}(A)")
+        assert "operatorname" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\text{Res} decomposed into R*e*s")
+    def test_text_residue(self, server):
+        resp = server.evaluate("\\text{Res}_{z=z_0} f(z)")
+        assert "text" not in resp.get("expression", "")
+
+
+class TestDotNotationAsVariable:
+    """\\dot{q} silently parsed as dot*q in equations."""
+
+    @pytest.mark.xfail(reason="\\dot{q} parsed as dot*q, not time derivative")
+    def test_euler_lagrange_dot(self, server):
+        resp = server.evaluate(
+            "\\frac{d}{dt}\\frac{\\partial L}{\\partial \\dot{q}} "
+            "- \\frac{\\partial L}{\\partial q} = 0"
+        )
+        expr = resp.get("expression", "")
+        assert "dot*q" not in expr
+
+    @pytest.mark.xfail(reason="\\dot{q} = ... drops equation body")
+    def test_hamilton_equation(self, server):
+        resp = server.evaluate("\\dot{q}_i = \\frac{\\partial H}{\\partial p_i}")
+        expr = resp.get("expression", "")
+        assert "H" in expr or "Derivative" in expr
+
+
+class TestNthDerivativeNotation:
+    """f^{(n)}(x) parsed incorrectly."""
+
+    @pytest.mark.xfail(reason="f^{(n)}(x) parsed as f**n*x, not nth derivative")
+    def test_nth_derivative(self, server):
+        resp = server.evaluate("f^{(n)}(x)")
+        expr = resp.get("expression", "")
+        assert "f(x)" in expr or "Derivative" in expr
+
+
+class TestChooseAsVariable:
+    """{n \\choose k} parsed as variable multiplication."""
+
+    @pytest.mark.xfail(reason="{n \\choose k} not recognized as binomial")
+    def test_choose_notation(self, server):
+        resp = server.evaluate("{n \\choose k}")
+        assert "choose" not in resp.get("expression", "")
+
+
+class TestColonAsDivision:
+    """Colon : silently parsed as division."""
+
+    @pytest.mark.xfail(reason="colon parsed as division, not separator")
+    def test_hypothesis_notation(self, server):
+        resp = server.evaluate("H_0: \\mu = \\mu_0")
+        expr = resp.get("expression", "")
+        assert "H_{0}/mu" not in expr
+
+
+class TestRelationsAsVariables:
+    """Relational operators silently parsed as variable names."""
+
+    @pytest.mark.xfail(reason="\\sim parsed as variable in distribution notation")
+    def test_sim_distribution(self, server):
+        resp = server.evaluate("X \\sim N(\\mu, \\sigma^2)")
+        assert "sim" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\perp parsed as variable")
+    def test_perp_independence(self, server):
+        resp = server.evaluate("X \\perp Y")
+        assert "perp" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\succeq parsed as variable")
+    def test_succeq_psd(self, server):
+        resp = server.evaluate("A \\succeq 0")
+        assert "succeq" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\mid parsed as variable in conditional")
+    def test_mid_conditional(self, server):
+        resp = server.evaluate("P(A \\mid B)")
+        assert "mid" not in resp.get("expression", "")
+
+
+class TestSquareBracketAsMultiplication:
+    """Square brackets E[X] parsed as E*X multiplication."""
+
+    @pytest.mark.xfail(reason="E[X] square brackets become multiplication")
+    def test_expectation_bracket(self, server):
+        resp = server.evaluate("E[X]")
+        expr = resp.get("expression", "")
+        assert expr != "E*X"
+
+    @pytest.mark.xfail(reason="\\mathbb{E}[X] parsed as mathbb*(E*X)")
+    def test_mathbb_expectation(self, server):
+        resp = server.evaluate("\\mathbb{E}[X]")
+        assert "mathbb" not in resp.get("expression", "")
+
+
+class TestDoubleFactorialSuspect:
+    """n!! parsed as factorial(factorial(n)) instead of double factorial."""
+
+    @pytest.mark.xfail(reason="n!! parsed as nested factorial, not double factorial")
+    def test_double_factorial_semantics(self, server):
+        resp = server.evaluate("n!!")
+        expr = resp.get("expression", "")
+        assert "factorial(factorial" not in expr
+
+    @pytest.mark.xfail(reason="n!!! parsed as triple nested factorial")
+    def test_triple_factorial_semantics(self, server):
+        resp = server.evaluate("n!!!")
+        expr = resp.get("expression", "")
+        assert "factorial(factorial(factorial" not in expr
+
+
+class TestModularArithmeticAsVariable:
+    """Modular arithmetic operators silently parsed as variables."""
+
+    @pytest.mark.xfail(reason="\\equiv parsed as variable")
+    def test_equiv_pmod(self, server):
+        resp = server.evaluate("a \\equiv b \\pmod{n}")
+        assert "equiv" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\bmod parsed as variable")
+    def test_bmod_as_variable(self, server):
+        resp = server.evaluate("a \\bmod n")
+        assert "bmod" not in resp.get("expression", "")
+
+
+class TestLVertRVertAsVariable:
+    """\\lVert/\\rVert parsed as variable names."""
+
+    @pytest.mark.xfail(reason="\\lVert/\\rVert parsed as variables")
+    def test_lvert_rvert_norm(self, server):
+        resp = server.evaluate("\\lVert x \\rVert")
+        assert "lVert" not in resp.get("expression", "")
+
+
+class TestAccentDropsContext:
+    """Accents lose subscripts or equation context."""
+
+    @pytest.mark.xfail(reason="\\chi^2_k loses subscript _k")
+    def test_chi_squared_subscript(self, server):
+        resp = server.evaluate("\\chi^2_k")
+        expr = resp.get("expression", "")
+        assert "k" in expr
+
+    @pytest.mark.xfail(reason="\\hat{\\theta} becomes hat*theta")
+    def test_hat_theta(self, server):
+        resp = server.evaluate("\\hat{\\theta}_{ML}")
+        expr = resp.get("expression", "")
+        assert "hat" not in expr or "hat(theta)" in expr.lower()
+
+    @pytest.mark.xfail(reason="Entropy sum silently drops \\sum body")
+    def test_entropy_sum_dropped(self, server):
+        resp = server.evaluate("S = -k_B \\sum_i p_i \\ln p_i")
+        expr = resp.get("expression", "")
+        assert "ln" in expr.lower() or "log" in expr.lower() or "Sum" in expr
+
+
+class TestOtimesOplusAsVariable:
+    """\\otimes and \\oplus parsed as variable names in expressions."""
+
+    @pytest.mark.xfail(reason="\\otimes parsed as variable in Kronecker product")
+    def test_kronecker_product(self, server):
+        resp = server.evaluate("A \\otimes B")
+        assert "otimes" not in resp.get("expression", "")
+
+    @pytest.mark.xfail(reason="\\oplus parsed as variable in direct sum")
+    def test_direct_sum(self, server):
+        resp = server.evaluate("A \\oplus B")
+        assert "oplus" not in resp.get("expression", "")
+
+
+class TestSupInfAsVariable:
+    """\\sup and \\inf with \\in — \\in becomes variable 'in' inside subscript."""
+
+    @pytest.mark.xfail(reason="\\sup_{x \\in S} — \\in parsed as variable 'in'")
+    def test_sup_in(self, server):
+        resp = server.evaluate("\\sup_{x \\in S} f(x)")
+        expr = resp.get("expression", "")
+        # The expression should not contain 'in' as an implicit variable
+        assert "in" not in expr
+
+    @pytest.mark.xfail(reason="\\inf_{x \\in S} — \\in parsed as variable 'in'")
+    def test_inf_in(self, server):
+        resp = server.evaluate("\\inf_{x \\in S} f(x)")
+        expr = resp.get("expression", "")
+        assert "in" not in expr
