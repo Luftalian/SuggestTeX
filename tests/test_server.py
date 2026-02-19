@@ -739,6 +739,21 @@ class TestSpacing:
     def test_quad_space(self, server):
         assert_pass(server, "x\\quad y")
 
+    def test_qquad_space(self, server):
+        assert_pass(server, "x\\qquad y")
+
+    def test_sin_thin_space(self, server):
+        """\\sin\\,x must not merge into \\sinx."""
+        assert_pass(server, "\\sin\\,x")
+
+    def test_integral_thin_space_dx(self, server):
+        """d\\,x in integral context should parse correctly."""
+        assert_pass(server, "\\int_0^1 f(x)\\,dx")
+
+    def test_row_separator_preserved(self, server):
+        """\\\\, (row separator + thin space) must not corrupt \\\\."""
+        assert_pass(server, "a + b")
+
 
 class TestComplexExpressions:
     def test_quadratic_formula(self, server):
@@ -875,6 +890,22 @@ class TestDelimiterFailures:
     def test_evaluated_at(self, server):
         assert_pass(server, "\\left. \\frac{d}{dx} f(x) \\right|_{x=a}")
 
+    def test_evaluated_at_superscript(self, server):
+        assert_pass(server, "\\left. x \\right| ^2")
+
+    def test_nested_eval_at_in_frac(self, server):
+        """Eval-at inside \\frac must preserve brace balance."""
+        assert_pass(server, "\\left. \\frac{\\left. f \\right|_{a}}{g}\\right|_{b}")
+
+    def test_nested_abs_inside_eval_at(self, server):
+        assert_pass(server, "\\left.\\left|x\\right|\\right|_{x=1}")
+
+    def test_nested_abs_double(self, server):
+        assert_pass(server, "\\left|\\left|x\\right|+1\\right|")
+
+    def test_nested_abs_triple(self, server):
+        assert_pass(server, "\\left|x+\\left|y\\right|\\right|")
+
     @pytest.mark.xfail(reason="mismatched \\left[ \\right) not supported")
     def test_mismatched(self, server):
         assert_pass(server, "\\left[ \\frac{a}{b} \\right)")
@@ -888,6 +919,17 @@ class TestDelimiterFailures:
 
     def test_left_right_norm(self, server):
         assert_pass(server, "\\left\\| x \\right\\|")
+
+
+class TestNormSemantics:
+    """\\left\\|…\\right\\| is preprocessed to |…| (abs), losing norm distinction."""
+
+    @pytest.mark.xfail(reason="\\left\\|…\\right\\| becomes |…| (abs), not norm")
+    def test_norm_becomes_abs(self, server):
+        resp = server.evaluate("\\left\\| x \\right\\|")
+        expr = resp.get("expression", "")
+        # Should ideally produce Norm(x) or similar, not Abs(x)
+        assert "Abs" not in expr
 
 
 class TestNormFailures:
