@@ -57,7 +57,7 @@ def preprocess_latex(expr: str) -> str:
     # Use balanced-brace matching so \right| inside \frac{}{} is not
     # consumed prematurely (e.g. \left. \frac{\left. f \right|_a}{g}\right|_b).
     _BRACE_BAL = (
-        r"(?:[^{}]|\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\})*?"
+        r"(?:[^{}]|\{(?:[^{}]|\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\})*\})*?"
     )
     expr = re.sub(
         r"\\left\.\s*(" + _BRACE_BAL + r")\\right\|\s*(?=[_^])",

@@ -750,9 +750,9 @@ class TestSpacing:
         """d\\,x in integral context should parse correctly."""
         assert_pass(server, "\\int_0^1 f(x)\\,dx")
 
-    def test_row_separator_preserved(self, server):
-        """\\\\, (row separator + thin space) must not corrupt \\\\."""
-        assert_pass(server, "a + b")
+    def test_multiple_spacing_commands(self, server):
+        """Multiple spacing commands in one expression."""
+        assert_pass(server, "\\cos\\;x + \\sin\\!y")
 
 
 class TestComplexExpressions:
