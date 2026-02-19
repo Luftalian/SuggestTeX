@@ -897,6 +897,10 @@ class TestDelimiterFailures:
         """Eval-at inside \\frac must preserve brace balance."""
         assert_pass(server, "\\left. \\frac{\\left. f \\right|_{a}}{g}\\right|_{b}")
 
+    def test_nested_eval_at_inner_grouping(self, server):
+        """Inner eval-at body must be wrapped in parens for correct scope."""
+        assert_pass(server, "\\left. \\frac{\\left. f+g \\right|_{a}}{h}\\right|_{b}")
+
     def test_nested_abs_inside_eval_at(self, server):
         assert_pass(server, "\\left.\\left|x\\right|\\right|_{x=1}")
 

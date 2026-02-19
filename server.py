@@ -59,11 +59,13 @@ def preprocess_latex(expr: str) -> str:
     _BRACE_BAL = (
         r"(?:[^{}]|\{(?:[^{}]|\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\})*\})*?"
     )
-    expr = re.sub(
-        r"\\left\.\s*(" + _BRACE_BAL + r")\\right\|\s*(?=[_^])",
-        r"(\1)|",
-        expr,
+    _eval_at = re.compile(
+        r"\\left\.\s*(" + _BRACE_BAL + r")\\right\|\s*(?=[_^])"
     )
+    prev = None
+    while prev != expr:
+        prev = expr
+        expr = _eval_at.sub(r"(\1)|", expr)
     # Remaining standalone \left. or \right| (without matched pair)
     expr = re.sub(r"\\left\.", "", expr)
     expr = re.sub(r"\\right\|", "|", expr)
