@@ -946,6 +946,60 @@ class TestNormFailures:
         assert_pass(server, "\\|f\\|_p")
 
 
+class TestEvalAtBareScripts:
+    """Round 10: eval-at with bare (unbraced) sub/superscripts."""
+
+    def test_eval_at_bare_subscript(self, server):
+        """\\left. f(x) \\right|_a should parse (not fail due to bare _a)."""
+        assert_pass(server, "\\left. f(x) \\right|_a")
+
+    def test_eval_at_bare_superscript(self, server):
+        """\\left. x^2 \\right|^b should parse."""
+        assert_pass(server, "\\left. x^2 \\right|^b")
+
+    def test_eval_at_bare_both(self, server):
+        """\\left. f(x) \\right|_a^b with both bare limits."""
+        assert_pass(server, "\\left. f(x) \\right|_a^b")
+
+
+class TestEvalAtDeepNesting:
+    """Round 10: eval-at with deeply nested \\frac (>4 brace levels)."""
+
+    def test_eval_at_5_nested_frac(self, server):
+        """5-level nested \\frac inside \\left.…\\right| must preserve scope."""
+        assert_pass(
+            server,
+            "\\left. \\frac{1}{\\frac{1}{\\frac{1}{\\frac{1}{\\frac{1}{x}}}}} \\right|_{x=1}",
+        )
+
+    def test_eval_at_5_nested_frac_plus_term(self, server):
+        """Deep nesting + top-level sum: bar must bind to whole expression."""
+        assert_pass(
+            server,
+            "\\left. x + \\frac{1}{\\frac{1}{\\frac{1}{\\frac{1}{\\frac{1}{y}}}}} \\right|_{y=1}",
+        )
+
+
+class TestAbsEvalAtConflict:
+    """Round 10: \\left| wrapping \\left.…\\right| must not mis-pair."""
+
+    def test_abs_wrapping_eval_at(self, server):
+        """\\left|\\left. f \\right|_a\\right| — abs should not steal inner \\right|."""
+        assert_pass(server, "\\left|\\left. f \\right|_{a}\\right|")
+
+
+class TestCfracWithSpace:
+    """Round 10: \\cfrac followed by space before opening brace."""
+
+    def test_cfrac_space_before_brace(self, server):
+        """\\cfrac {1}{2} (with space) should be normalized to \\frac."""
+        assert_pass(server, "\\cfrac {1}{2}")
+
+    def test_cfrac_no_space(self, server):
+        """\\cfrac{1}{2} (no space) should still work."""
+        assert_pass(server, "\\cfrac{1}{2}")
+
+
 class TestInnerProductFailure:
     @pytest.mark.xfail(reason="\\langle \\rangle not supported as delimiters")
     def test_inner_product(self, server):

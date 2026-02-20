@@ -9,6 +9,58 @@ def send_response(data):
     sys.stdout.flush()
 
 
+def _replace_eval_at(expr: str) -> str:
+    """Replace \\left. ... \\right|_{/^} with (...)| using brace-depth tracking.
+
+    Unlike a fixed-depth regex, this handles arbitrarily nested braces.
+    """
+    LEFT_DOT = "\\left."
+    RIGHT_BAR = "\\right|"
+    result = []
+    i = 0
+    while i < len(expr):
+        if expr[i:i + len(LEFT_DOT)] == LEFT_DOT:
+            j = i + len(LEFT_DOT)
+            depth = 0
+            found = -1
+            while j < len(expr):
+                c = expr[j]
+                if c == '{':
+                    depth += 1
+                    j += 1
+                elif c == '}':
+                    depth -= 1
+                    j += 1
+                elif depth == 0 and expr[j:j + len(RIGHT_BAR)] == RIGHT_BAR:
+                    after = j + len(RIGHT_BAR)
+                    while after < len(expr) and expr[after] in ' \t':
+                        after += 1
+                    if after < len(expr) and expr[after] in '_^':
+                        found = j
+                        break
+                    else:
+                        j += len(RIGHT_BAR)
+                else:
+                    j += 1
+            if found >= 0:
+                body = expr[i + len(LEFT_DOT):found]
+                after = found + len(RIGHT_BAR)
+                # Consume whitespace between \right| and _/^
+                while after < len(expr) and expr[after] in ' \t':
+                    after += 1
+                result.append("(")
+                result.append(body)
+                result.append(")|")
+                i = after
+            else:
+                result.append(expr[i])
+                i += 1
+        else:
+            result.append(expr[i])
+            i += 1
+    return "".join(result)
+
+
 def preprocess_latex(expr: str) -> str:
     """Normalize LaTeX before passing to parse_latex.
 
@@ -40,8 +92,22 @@ def preprocess_latex(expr: str) -> str:
     # \left\| ... \right\|  →  | ... |  (treat scalar norm as abs)
     expr = re.sub(r"\\left\\\|", "|", expr)
     expr = re.sub(r"\\right\\\|", "|", expr)
-    # Normalize \left| ... \right| (absolute value) BEFORE eval-at so the
-    # eval-at regex does not accidentally consume inner absolute-value bars.
+    # Resolve eval-at (\left. ... \right|_{...}) BEFORE abs normalization
+    # so that \right| from eval-at is not consumed by the abs regex.
+    # Uses brace-depth tracking for unlimited nesting depth.
+    prev = None
+    while prev != expr:
+        prev = expr
+        expr = _replace_eval_at(expr)
+    # Wrap bare eval-at scripts: )|_a → )|_{a}, )|^b → )|^{b}
+    # SymPy's grammar requires braced forms |_{...} and |^{...}.
+    expr = re.sub(r"\)\|_([^{\s\\])", r")|_{\1}", expr)
+    expr = re.sub(r"\)\|\^([^{\s\\])", r")|^{\1}", expr)
+    # Also handle second script after first braced one: )|_{a}^b → )|_{a}^{b}
+    expr = re.sub(r"(\)\|[_^]\{[^}]*\})\^([^{\s\\])", r"\1^{\2}", expr)
+    expr = re.sub(r"(\)\|[_^]\{[^}]*\})_([^{\s\\])", r"\1_{\2}", expr)
+    # Normalize \left| ... \right| (absolute value) AFTER eval-at so the
+    # abs regex does not consume \right| belonging to eval-at constructs.
     # Use a tempered greedy token to match innermost pairs first, then loop
     # outward so nested absolute values like \left|\left|x\right|+1\right|
     # resolve correctly to ||x|+1|.
@@ -52,20 +118,6 @@ def preprocess_latex(expr: str) -> str:
     while prev != expr:
         prev = expr
         expr = _abs_inner.sub(r"|\1|", expr)
-    # \left. ... \right|_{...}  →  wrap in parens to preserve eval-at scope
-    # Allow optional whitespace before _ or ^ in the lookahead.
-    # Use balanced-brace matching so \right| inside \frac{}{} is not
-    # consumed prematurely (e.g. \left. \frac{\left. f \right|_a}{g}\right|_b).
-    _BRACE_BAL = (
-        r"(?:[^{}]|\{(?:[^{}]|\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\})*\})*?"
-    )
-    _eval_at = re.compile(
-        r"\\left\.\s*(" + _BRACE_BAL + r")\\right\|\s*(?=[_^])"
-    )
-    prev = None
-    while prev != expr:
-        prev = expr
-        expr = _eval_at.sub(r"(\1)|", expr)
     # Remaining standalone \left. or \right| (without matched pair)
     expr = re.sub(r"\\left\.", "", expr)
     expr = re.sub(r"\\right\|", "|", expr)
@@ -82,8 +134,8 @@ def preprocess_latex(expr: str) -> str:
     # 4. Strip empty leading groups:  {}_x → _x ,  {}^x → ^x
     expr = re.sub(r"\{\}(?=[_^])", "", expr)
 
-    # 5. \cfrac → \frac (lookahead for { or digit to avoid matching e.g. \dcfrac)
-    expr = re.sub(r"\\cfrac(?=[{\d\[])", r"\\frac", expr)
+    # 5. \cfrac → \frac (allow optional whitespace; lookahead for { or digit)
+    expr = re.sub(r"\\cfrac\s*(?=[{\d\[])", r"\\frac", expr)
 
     return expr.strip()
 
