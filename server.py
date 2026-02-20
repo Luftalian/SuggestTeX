@@ -13,33 +13,56 @@ def _replace_eval_at(expr: str) -> str:
     """Replace \\left. ... \\right|_{/^} with (...)| using brace-depth tracking.
 
     Unlike a fixed-depth regex, this handles arbitrarily nested braces.
+    Also tracks ``\\left``/``\\right`` delimiter nesting so that inner
+    ``\\left|…\\right|`` pairs (absolute value) are not mistaken for the
+    eval-at closing bar.
     """
     LEFT_DOT = "\\left."
     RIGHT_BAR = "\\right|"
+    LEFT_BAR = "\\left|"
+    LEFT_CMD = "\\left"
+    RIGHT_CMD = "\\right"
     result = []
     i = 0
     while i < len(expr):
         if expr[i:i + len(LEFT_DOT)] == LEFT_DOT:
             j = i + len(LEFT_DOT)
-            depth = 0
+            brace_depth = 0
+            delim_depth = 0
             found = -1
             while j < len(expr):
                 c = expr[j]
                 if c == '{':
-                    depth += 1
+                    brace_depth += 1
                     j += 1
                 elif c == '}':
-                    depth -= 1
+                    brace_depth -= 1
                     j += 1
-                elif depth == 0 and expr[j:j + len(RIGHT_BAR)] == RIGHT_BAR:
-                    after = j + len(RIGHT_BAR)
-                    while after < len(expr) and expr[after] in ' \t':
-                        after += 1
-                    if after < len(expr) and expr[after] in '_^':
-                        found = j
-                        break
-                    else:
+                elif brace_depth == 0 and expr[j:j + len(LEFT_BAR)] == LEFT_BAR:
+                    delim_depth += 1
+                    j += len(LEFT_BAR)
+                elif brace_depth == 0 and expr[j:j + len(RIGHT_BAR)] == RIGHT_BAR:
+                    if delim_depth > 0:
+                        delim_depth -= 1
                         j += len(RIGHT_BAR)
+                    else:
+                        after = j + len(RIGHT_BAR)
+                        while after < len(expr) and expr[after] in ' \t':
+                            after += 1
+                        if after < len(expr) and expr[after] in '_^':
+                            found = j
+                            break
+                        else:
+                            j += len(RIGHT_BAR)
+                elif brace_depth == 0 and expr[j:j + len(LEFT_CMD)] == LEFT_CMD:
+                    # Other \left delimiters (e.g. \left(, \left[)
+                    delim_depth += 1
+                    j += len(LEFT_CMD)
+                elif brace_depth == 0 and expr[j:j + len(RIGHT_CMD)] == RIGHT_CMD:
+                    # Other \right delimiters (e.g. \right), \right])
+                    if delim_depth > 0:
+                        delim_depth -= 1
+                    j += len(RIGHT_CMD)
                 else:
                     j += 1
             if found >= 0:
@@ -101,11 +124,26 @@ def preprocess_latex(expr: str) -> str:
         expr = _replace_eval_at(expr)
     # Wrap bare eval-at scripts: )|_a → )|_{a}, )|^b → )|^{b}
     # SymPy's grammar requires braced forms |_{...} and |^{...}.
+    # Handle single char: )|_a → )|_{a}
     expr = re.sub(r"\)\|_([^{\s\\])", r")|_{\1}", expr)
     expr = re.sub(r"\)\|\^([^{\s\\])", r")|^{\1}", expr)
-    # Also handle second script after first braced one: )|_{a}^b → )|_{a}^{b}
-    expr = re.sub(r"(\)\|[_^]\{[^}]*\})\^([^{\s\\])", r"\1^{\2}", expr)
-    expr = re.sub(r"(\)\|[_^]\{[^}]*\})_([^{\s\\])", r"\1_{\2}", expr)
+    # Handle control sequences: )|_\alpha → )|_{\alpha}
+    expr = re.sub(r"\)\|_(\\[a-zA-Z]+)", r")|_{\1}", expr)
+    expr = re.sub(r"\)\|\^(\\[a-zA-Z]+)", r")|^{\1}", expr)
+    # Handle second script after braced first (allow nested braces in first):
+    # )|_{a}^b → )|_{a}^{b},  )|_{x_{0}}^n → )|_{x_{0}}^{n}
+    _BRACE_GROUP = r"\{(?:[^{}]|\{[^{}]*\})*\}"
+    expr = re.sub(r"(\)\|[_^]" + _BRACE_GROUP + r")\^([^{\s\\])", r"\1^{\2}", expr)
+    expr = re.sub(r"(\)\|[_^]" + _BRACE_GROUP + r")_([^{\s\\])", r"\1_{\2}", expr)
+    expr = re.sub(r"(\)\|[_^]" + _BRACE_GROUP + r")\^(\\[a-zA-Z]+)", r"\1^{\2}", expr)
+    expr = re.sub(r"(\)\|[_^]" + _BRACE_GROUP + r")_(\\[a-zA-Z]+)", r"\1_{\2}", expr)
+    # Reorder eval-at bounds: )|_{sub}^{sup} → )|^{sup}_{sub}
+    # SymPy's grammar only accepts |^{...}_{...} (super before sub).
+    expr = re.sub(
+        r"\)\|(_" + _BRACE_GROUP + r")(\^" + _BRACE_GROUP + r")",
+        r")|\2\1",
+        expr,
+    )
     # Normalize \left| ... \right| (absolute value) AFTER eval-at so the
     # abs regex does not consume \right| belonging to eval-at constructs.
     # Use a tempered greedy token to match innermost pairs first, then loop

@@ -1000,6 +1000,55 @@ class TestCfracWithSpace:
         assert_pass(server, "\\cfrac{1}{2}")
 
 
+class TestEvalAtAbsNesting:
+    """Round 11: eval-at scanner correctly tracks \\left|…\\right| nesting.
+
+    The eval-at scanner no longer mis-pairs with inner abs \\right|, but
+    |x|_2 is a norm notation that SymPy cannot parse.
+    """
+
+    @pytest.mark.xfail(reason="|x|_2 norm notation not supported by SymPy")
+    def test_abs_with_subscript_inside_eval_at(self, server):
+        """\\left.\\left|x\\right|_2\\right|_{x=1} — inner abs has subscript."""
+        assert_pass(server, "\\left.\\left|x\\right|_2\\right|_{x=1}")
+
+    def test_abs_with_superscript_inside_eval_at(self, server):
+        """\\left.\\left|x\\right|^2\\right|_{x=1} — inner abs has superscript."""
+        assert_pass(server, "\\left.\\left|x\\right|^2\\right|_{x=1}")
+
+
+class TestEvalAtBoundsOrder:
+    """Round 11: SymPy grammar requires |^{sup}_{sub} order, not |_{sub}^{sup}."""
+
+    def test_eval_at_sub_then_sup_reordered(self, server):
+        """\\left. f(x) \\right|_a^b must reorder to |^{b}_{a} for SymPy."""
+        assert_pass(server, "\\left. f(x) \\right|_a^b")
+
+    def test_eval_at_braced_sub_then_sup(self, server):
+        """\\left. f \\right|_{a}^{b} must also be reordered."""
+        assert_pass(server, "\\left. f \\right|_{a}^{b}")
+
+
+class TestEvalAtControlSequenceScripts:
+    """Round 11: bare control-sequence scripts like |_\\alpha must be braced."""
+
+    def test_eval_at_backslash_alpha_subscript(self, server):
+        """\\left. f \\right|_\\alpha should become |_{\\alpha}."""
+        assert_pass(server, "\\left. f \\right|_\\alpha")
+
+    def test_eval_at_backslash_infty_superscript(self, server):
+        """\\left. f \\right|^\\infty should become |^{\\infty}."""
+        assert_pass(server, "\\left. f \\right|^\\infty")
+
+
+class TestEvalAtNestedBracesSecondScript:
+    """Round 11: )|_{x_{0}}^n — second script not braced when first has nested braces."""
+
+    def test_nested_sub_bare_sup(self, server):
+        """\\left. f \\right|_{x_{0}}^n must brace both scripts."""
+        assert_pass(server, "\\left. f \\right|_{x_{0}}^n")
+
+
 class TestInnerProductFailure:
     @pytest.mark.xfail(reason="\\langle \\rangle not supported as delimiters")
     def test_inner_product(self, server):
