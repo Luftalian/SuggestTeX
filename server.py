@@ -22,6 +22,9 @@ def _replace_eval_at(expr: str) -> str:
     LEFT_BAR = "\\left|"
     LEFT_CMD = "\\left"
     RIGHT_CMD = "\\right"
+    ESC_LBRACE = "\\{"
+    ESC_RBRACE = "\\}"
+    WS = ' \t\n'
     result = []
     i = 0
     while i < len(expr):
@@ -32,7 +35,12 @@ def _replace_eval_at(expr: str) -> str:
             found = -1
             while j < len(expr):
                 c = expr[j]
-                if c == '{':
+                # Skip escaped braces \{ and \} — not real brace nesting
+                if expr[j:j + len(ESC_LBRACE)] == ESC_LBRACE:
+                    j += len(ESC_LBRACE)
+                elif expr[j:j + len(ESC_RBRACE)] == ESC_RBRACE:
+                    j += len(ESC_RBRACE)
+                elif c == '{':
                     brace_depth += 1
                     j += 1
                 elif c == '}':
@@ -47,7 +55,7 @@ def _replace_eval_at(expr: str) -> str:
                         j += len(RIGHT_BAR)
                     else:
                         after = j + len(RIGHT_BAR)
-                        while after < len(expr) and expr[after] in ' \t':
+                        while after < len(expr) and expr[after] in WS:
                             after += 1
                         if after < len(expr) and expr[after] in '_^':
                             found = j
@@ -55,9 +63,15 @@ def _replace_eval_at(expr: str) -> str:
                         else:
                             j += len(RIGHT_BAR)
                 elif brace_depth == 0 and expr[j:j + len(LEFT_CMD)] == LEFT_CMD:
-                    # Other \left delimiters (e.g. \left(, \left[)
-                    delim_depth += 1
-                    j += len(LEFT_CMD)
+                    # Only treat as delimiter if not followed by a letter
+                    # (avoids matching \leftarrow, \leftrightarrow, etc.)
+                    after_left = j + len(LEFT_CMD)
+                    if after_left < len(expr) and expr[after_left].isalpha():
+                        # This is \leftarrow or similar, skip as regular text
+                        j += 1
+                    else:
+                        delim_depth += 1
+                        j += len(LEFT_CMD)
                 elif brace_depth == 0 and expr[j:j + len(RIGHT_CMD)] == RIGHT_CMD:
                     # Other \right delimiters (e.g. \right), \right])
                     if delim_depth > 0:
@@ -69,7 +83,7 @@ def _replace_eval_at(expr: str) -> str:
                 body = expr[i + len(LEFT_DOT):found]
                 after = found + len(RIGHT_BAR)
                 # Consume whitespace between \right| and _/^
-                while after < len(expr) and expr[after] in ' \t':
+                while after < len(expr) and expr[after] in WS:
                     after += 1
                 result.append("(")
                 result.append(body)
@@ -78,6 +92,73 @@ def _replace_eval_at(expr: str) -> str:
             else:
                 result.append(expr[i])
                 i += 1
+        else:
+            result.append(expr[i])
+            i += 1
+    return "".join(result)
+
+
+def _normalize_eval_at_scripts(expr: str) -> str:
+    """Normalize eval-at scripts after ``_replace_eval_at`` produces ``)|``.
+
+    * Wraps bare scripts in braces: ``)|_a`` → ``)|_{a}``, ``)|^b`` → ``)|^{b}``
+    * Wraps bare control-sequence scripts: ``)|_\\alpha`` → ``)|_{\\alpha}``
+    * Handles arbitrary brace nesting depth (no regex depth limit)
+    * Skips optional whitespace between scripts
+    * Reorders ``)|_{sub}^{sup}`` → ``)|^{sup}_{sub}`` (SymPy requirement)
+    """
+    MARKER = ")|"
+    WS = ' \t\n'
+    result = []
+    i = 0
+    while i < len(expr):
+        if expr[i:i + len(MARKER)] == MARKER:
+            result.append(MARKER)
+            j = i + len(MARKER)
+            scripts = {}  # '_' -> braced content, '^' -> braced content
+            for _ in range(2):
+                # Skip whitespace between scripts
+                k = j
+                while k < len(expr) and expr[k] in WS:
+                    k += 1
+                if k >= len(expr) or expr[k] not in '_^':
+                    break
+                script_type = expr[k]
+                k += 1
+                if k < len(expr) and expr[k] == '{':
+                    # Already braced — find matching } at arbitrary depth
+                    depth = 1
+                    start = k
+                    k += 1
+                    while k < len(expr) and depth > 0:
+                        if expr[k] == '{':
+                            depth += 1
+                        elif expr[k] == '}':
+                            depth -= 1
+                        k += 1
+                    scripts[script_type] = expr[start:k]  # e.g. {x_{i_{j}}}
+                elif k < len(expr) and expr[k] == '\\':
+                    # Bare control sequence — wrap in braces
+                    start = k
+                    k += 1
+                    while k < len(expr) and expr[k].isalpha():
+                        k += 1
+                    scripts[script_type] = '{' + expr[start:k] + '}'
+                elif k < len(expr) and expr[k] not in WS:
+                    # Single char — wrap in braces
+                    scripts[script_type] = '{' + expr[k] + '}'
+                    k += 1
+                else:
+                    break
+                j = k
+            # Output in ^{...}_{...} order (SymPy requires super before sub)
+            if '^' in scripts:
+                result.append('^')
+                result.append(scripts['^'])
+            if '_' in scripts:
+                result.append('_')
+                result.append(scripts['_'])
+            i = j
         else:
             result.append(expr[i])
             i += 1
@@ -122,28 +203,10 @@ def preprocess_latex(expr: str) -> str:
     while prev != expr:
         prev = expr
         expr = _replace_eval_at(expr)
-    # Wrap bare eval-at scripts: )|_a → )|_{a}, )|^b → )|^{b}
-    # SymPy's grammar requires braced forms |_{...} and |^{...}.
-    # Handle single char: )|_a → )|_{a}
-    expr = re.sub(r"\)\|_([^{\s\\])", r")|_{\1}", expr)
-    expr = re.sub(r"\)\|\^([^{\s\\])", r")|^{\1}", expr)
-    # Handle control sequences: )|_\alpha → )|_{\alpha}
-    expr = re.sub(r"\)\|_(\\[a-zA-Z]+)", r")|_{\1}", expr)
-    expr = re.sub(r"\)\|\^(\\[a-zA-Z]+)", r")|^{\1}", expr)
-    # Handle second script after braced first (allow nested braces in first):
-    # )|_{a}^b → )|_{a}^{b},  )|_{x_{0}}^n → )|_{x_{0}}^{n}
-    _BRACE_GROUP = r"\{(?:[^{}]|\{[^{}]*\})*\}"
-    expr = re.sub(r"(\)\|[_^]" + _BRACE_GROUP + r")\^([^{\s\\])", r"\1^{\2}", expr)
-    expr = re.sub(r"(\)\|[_^]" + _BRACE_GROUP + r")_([^{\s\\])", r"\1_{\2}", expr)
-    expr = re.sub(r"(\)\|[_^]" + _BRACE_GROUP + r")\^(\\[a-zA-Z]+)", r"\1^{\2}", expr)
-    expr = re.sub(r"(\)\|[_^]" + _BRACE_GROUP + r")_(\\[a-zA-Z]+)", r"\1_{\2}", expr)
-    # Reorder eval-at bounds: )|_{sub}^{sup} → )|^{sup}_{sub}
-    # SymPy's grammar only accepts |^{...}_{...} (super before sub).
-    expr = re.sub(
-        r"\)\|(_" + _BRACE_GROUP + r")(\^" + _BRACE_GROUP + r")",
-        r")|\2\1",
-        expr,
-    )
+    # Normalize eval-at scripts: brace bare scripts, reorder _{sub}^{sup}.
+    # Uses character scanning to handle arbitrary brace nesting depth and
+    # optional whitespace between scripts.
+    expr = _normalize_eval_at_scripts(expr)
     # Normalize \left| ... \right| (absolute value) AFTER eval-at so the
     # abs regex does not consume \right| belonging to eval-at constructs.
     # Use a tempered greedy token to match innermost pairs first, then loop

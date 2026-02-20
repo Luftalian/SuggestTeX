@@ -1049,6 +1049,63 @@ class TestEvalAtNestedBracesSecondScript:
         assert_pass(server, "\\left. f \\right|_{x_{0}}^n")
 
 
+class TestEvalAtLeftarrow:
+    """Round 12: \\leftarrow inside eval-at body must not be treated as \\left delimiter."""
+
+    def test_leftarrow_in_eval_at(self, server):
+        """\\left. x \\leftarrow y \\right|_{x=1} must wrap correctly."""
+        assert_pass(server, "\\left. x \\leftarrow y \\right|_{x=1}")
+
+    def test_longleftarrow_in_eval_at(self, server):
+        assert_pass(server, "\\left. x \\longleftarrow y \\right|_{x=1}")
+
+
+class TestEvalAtNewline:
+    """Round 12: newline between \\right| and _/^ must be skipped."""
+
+    def test_newline_before_subscript(self, server):
+        assert_pass(server, "\\left. f \\right|\n_{x=1}")
+
+    def test_newline_before_superscript(self, server):
+        assert_pass(server, "\\left. f \\right|\n^{2}")
+
+
+class TestEvalAtEscapedBraces:
+    """Round 12: \\left\\{...\\right\\} inside eval-at must not break brace tracking."""
+
+    def test_curly_delimiters_in_eval_at(self, server):
+        assert_pass(server, "\\left. \\left\\{x\\right\\} \\right|_{x=1}")
+
+
+class TestEvalAtDeepBraceGroup:
+    """Round 12: deeply nested brace groups in eval-at scripts."""
+
+    def test_two_level_nested_sub_with_sup(self, server):
+        """)|_{x_{i_{j}}}^n must brace ^n and reorder."""
+        assert_pass(server, "\\left. f \\right|_{x_{i_{j}}}^{n}")
+
+    def test_three_level_nested_sub_with_sup(self, server):
+        """)|_{x_{a_{b_{c}}}}^{n} must reorder."""
+        assert_pass(server, "\\left. f \\right|_{x_{a_{b_{c}}}}^{n}")
+
+
+class TestEvalAtSpacedBoundsReorder:
+    """Round 12: spaced eval-at bounds )|_{a} ^{b} must be reordered."""
+
+    def test_spaced_sub_sup(self, server):
+        assert_pass(server, "\\left. f \\right|_{a} ^{b}")
+
+    def test_spaced_sub_bare_sup(self, server):
+        assert_pass(server, "\\left. f \\right|_{a} ^b")
+
+
+class TestEvalAtControlSeqWithArgs:
+    """Round 12: bare control-seq with brace args in eval-at scripts."""
+
+    def test_frac_in_subscript(self, server):
+        assert_pass(server, "\\left. f \\right|_\\frac{1}{2}")
+
+
 class TestInnerProductFailure:
     @pytest.mark.xfail(reason="\\langle \\rangle not supported as delimiters")
     def test_inner_product(self, server):
