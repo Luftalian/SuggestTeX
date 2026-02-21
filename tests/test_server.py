@@ -2367,6 +2367,35 @@ class TestOtimesOplusAsVariable:
         assert "oplus" not in resp.get("expression", "")
 
 
+class TestSpacedNormDelimiters:
+    """Round 17: whitespace between \\left/\\right and \\| norm delimiters."""
+
+    def test_spaced_left_norm(self, server):
+        assert_pass(server, "\\left \\|x\\right\\|")
+
+    def test_spaced_right_norm(self, server):
+        assert_pass(server, "\\left\\|x\\right \\|")
+
+    def test_both_spaced_norm(self, server):
+        assert_pass(server, "\\left \\| x \\right \\|")
+
+
+class TestScriptDuplicateGuard:
+    """Round 17: duplicate script type in eval-at should not overwrite."""
+
+    def test_sum_with_own_scripts(self, server):
+        """)|_\\sum_{i=1}^n should not drop \\sum."""
+        assert_pass(server, "\\left. f \\right|_\\sum_{i=1}^n")
+
+
+class TestOneSidedLeftInEvalAt:
+    """Round 17: one-sided \\left\\langle inside eval-at body."""
+
+    def test_bra_inside_eval_at(self, server):
+        """\\left. \\left\\langle a| \\right|_{x=1} — bare | leaves delim_depth=1."""
+        assert_pass(server, "\\left. \\left\\langle a| \\right|_{x=1}")
+
+
 class TestSupInfAsVariable:
     """\\sup and \\inf with \\in — \\in becomes variable 'in' inside subscript."""
 

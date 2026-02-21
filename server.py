@@ -130,6 +130,8 @@ def _normalize_eval_at_scripts(expr: str) -> str:
                 if k >= len(expr) or expr[k] not in '_^':
                     break
                 script_type = expr[k]
+                if script_type in scripts:
+                    break  # Don't overwrite existing script
                 k += 1
                 # Skip whitespace after _/^ (LaTeX allows _ {x})
                 while k < len(expr) and expr[k] in WS:
@@ -231,8 +233,9 @@ def preprocess_latex(expr: str) -> str:
     expr = re.sub(r"\\right\s*\|", r"\\right|", expr)
     expr = re.sub(r"\\left\s*\|", r"\\left|", expr)
     # \left\| ... \right\|  →  | ... |  (treat scalar norm as abs)
-    expr = re.sub(r"\\left\\\|", "|", expr)
-    expr = re.sub(r"\\right\\\|", "|", expr)
+    # Collapse optional whitespace before \| (e.g. \left \| → \left\|)
+    expr = re.sub(r"\\left\s*\\\|", "|", expr)
+    expr = re.sub(r"\\right\s*\\\|", "|", expr)
     # Resolve eval-at (\left. ... \right|_{...}) BEFORE abs normalization
     # so that \right| from eval-at is not consumed by the abs regex.
     # Uses brace-depth tracking for unlimited nesting depth.
