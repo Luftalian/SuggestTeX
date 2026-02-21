@@ -1106,6 +1106,44 @@ class TestEvalAtControlSeqWithArgs:
         assert_pass(server, "\\left. f \\right|_\\frac{1}{2}")
 
 
+class TestEvalAtRightarrow:
+    """Round 13: \\rightarrow etc. must not be treated as \\right delimiter."""
+
+    @pytest.mark.xfail(reason="\\rightarrow not supported by parse_latex")
+    def test_rightarrow_in_eval_at(self, server):
+        assert_pass(server, "\\left. x \\rightarrow y \\right|_{x=1}")
+
+    def test_rightharpoonup_in_eval_at(self, server):
+        assert_pass(server, "\\left. x \\rightharpoonup y \\right|_{x=1}")
+
+    def test_rightleftharpoons_in_eval_at(self, server):
+        assert_pass(server, "\\left. x \\rightleftharpoons y \\right|_{x=1}")
+
+
+class TestEvalAtControlSeqFullArgs:
+    """Round 13: bare control-seq with brace args must stay grouped in script."""
+
+    def test_frac_in_subscript_grouped(self, server):
+        """\\left. f \\right|_\\frac{1}{2} must keep \\frac{1}{2} as one subscript."""
+        assert_pass(server, "\\left. f \\right|_\\frac{1}{2}")
+
+    def test_sqrt_in_subscript(self, server):
+        assert_pass(server, "\\left. f \\right|_\\sqrt{2}")
+
+    def test_frac_in_superscript(self, server):
+        assert_pass(server, "\\left. f \\right|^\\frac{1}{2}")
+
+
+class TestAbsMultiline:
+    """Round 13: \\left|...\\right| across newlines must resolve."""
+
+    def test_abs_with_newline(self, server):
+        assert_pass(server, "\\left|x\n\\right|")
+
+    def test_abs_with_newline_and_content(self, server):
+        assert_pass(server, "\\left|x +\n y\\right|")
+
+
 class TestInnerProductFailure:
     @pytest.mark.xfail(reason="\\langle \\rangle not supported as delimiters")
     def test_inner_product(self, server):

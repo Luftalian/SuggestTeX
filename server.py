@@ -73,10 +73,16 @@ def _replace_eval_at(expr: str) -> str:
                         delim_depth += 1
                         j += len(LEFT_CMD)
                 elif brace_depth == 0 and expr[j:j + len(RIGHT_CMD)] == RIGHT_CMD:
-                    # Other \right delimiters (e.g. \right), \right])
-                    if delim_depth > 0:
-                        delim_depth -= 1
-                    j += len(RIGHT_CMD)
+                    # Only treat as delimiter if not followed by a letter
+                    # (avoids matching \rightarrow, \rightharpoonup, etc.)
+                    after_right = j + len(RIGHT_CMD)
+                    if after_right < len(expr) and expr[after_right].isalpha():
+                        # This is \rightarrow or similar, skip as regular text
+                        j += 1
+                    else:
+                        if delim_depth > 0:
+                            delim_depth -= 1
+                        j += len(RIGHT_CMD)
                 else:
                     j += 1
             if found >= 0:
@@ -138,11 +144,21 @@ def _normalize_eval_at_scripts(expr: str) -> str:
                         k += 1
                     scripts[script_type] = expr[start:k]  # e.g. {x_{i_{j}}}
                 elif k < len(expr) and expr[k] == '\\':
-                    # Bare control sequence — wrap in braces
+                    # Bare control sequence — consume name + brace args
                     start = k
                     k += 1
                     while k < len(expr) and expr[k].isalpha():
                         k += 1
+                    # Consume any following brace groups (e.g. \frac{1}{2})
+                    while k < len(expr) and expr[k] == '{':
+                        depth = 1
+                        k += 1
+                        while k < len(expr) and depth > 0:
+                            if expr[k] == '{':
+                                depth += 1
+                            elif expr[k] == '}':
+                                depth -= 1
+                            k += 1
                     scripts[script_type] = '{' + expr[start:k] + '}'
                 elif k < len(expr) and expr[k] not in WS:
                     # Single char — wrap in braces
@@ -213,7 +229,8 @@ def preprocess_latex(expr: str) -> str:
     # outward so nested absolute values like \left|\left|x\right|+1\right|
     # resolve correctly to ||x|+1|.
     _abs_inner = re.compile(
-        r"\\left\|((?:(?!\\left\||\\right\|).)+)\\right\|"
+        r"\\left\|((?:(?!\\left\||\\right\|).)+)\\right\|",
+        re.DOTALL,
     )
     prev = None
     while prev != expr:
