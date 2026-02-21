@@ -220,12 +220,16 @@ def preprocess_latex(expr: str) -> str:
     # 2. Strip spacing commands (but preserve \\ row separators)
     # Use negative lookbehind to avoid matching \\, \\; \\: \\! (row sep + spacing)
     expr = re.sub(r"(?<!\\)\\[,;:!]", " ", expr)
-    expr = re.sub(r"(?<!\\)\\quad\b", " ", expr)
-    expr = re.sub(r"(?<!\\)\\qquad\b", " ", expr)
+    expr = re.sub(r"(?<!\\)\\quad(?![a-zA-Z])", " ", expr)
+    expr = re.sub(r"(?<!\\)\\qquad(?![a-zA-Z])", " ", expr)
     # Replace backslash-space, but not double-backslash-space (row separator)
     expr = re.sub(r"(?<!\\)\\ ", " ", expr)
 
     # 3. Normalize \left/\right delimiters
+    # Collapse optional whitespace in \left/\right + delimiter pairs
+    expr = re.sub(r"\\left\s*\.", r"\\left.", expr)
+    expr = re.sub(r"\\right\s*\|", r"\\right|", expr)
+    expr = re.sub(r"\\left\s*\|", r"\\left|", expr)
     # \left\| ... \right\|  →  | ... |  (treat scalar norm as abs)
     expr = re.sub(r"\\left\\\|", "|", expr)
     expr = re.sub(r"\\right\\\|", "|", expr)

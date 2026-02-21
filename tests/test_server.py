@@ -1174,6 +1174,29 @@ class TestEvalAtCRLF:
         assert_pass(server, "\\left|x\r\n\\right|")
 
 
+class TestSpacedDelimiters:
+    """Round 16: whitespace between \\left/\\right and delimiter character."""
+
+    def test_spaced_left_dot(self, server):
+        assert_pass(server, "\\left . f \\right|_{x=1}")
+
+    def test_spaced_right_bar(self, server):
+        assert_pass(server, "\\left. f \\right |_{x=1}")
+
+    def test_both_spaced(self, server):
+        assert_pass(server, "\\left . f \\right |_{x=1}")
+
+
+class TestQuadBeforeNonLetter:
+    """Round 16: \\quad/\\qquad before digits and non-letter tokens."""
+
+    def test_quad_before_digit(self, server):
+        assert_pass(server, "x\\quad2")
+
+    def test_qquad_before_underscore(self, server):
+        assert_pass(server, "x\\qquad_0")
+
+
 class TestEvalAtSpacedControlSeqArgs:
     """Round 15: whitespace between control-seq and args in eval-at scripts."""
 
