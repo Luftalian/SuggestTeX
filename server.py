@@ -24,7 +24,7 @@ def _replace_eval_at(expr: str) -> str:
     RIGHT_CMD = "\\right"
     ESC_LBRACE = "\\{"
     ESC_RBRACE = "\\}"
-    WS = ' \t\n'
+    WS = ' \t\n\r'
     result = []
     i = 0
     while i < len(expr):
@@ -114,7 +114,7 @@ def _normalize_eval_at_scripts(expr: str) -> str:
     * Reorders ``)|_{sub}^{sup}`` → ``)|^{sup}_{sub}`` (SymPy requirement)
     """
     MARKER = ")|"
-    WS = ' \t\n'
+    WS = ' \t\n\r'
     result = []
     i = 0
     while i < len(expr):
@@ -131,6 +131,9 @@ def _normalize_eval_at_scripts(expr: str) -> str:
                     break
                 script_type = expr[k]
                 k += 1
+                # Skip whitespace after _/^ (LaTeX allows _ {x})
+                while k < len(expr) and expr[k] in WS:
+                    k += 1
                 if k < len(expr) and expr[k] == '{':
                     # Already braced — find matching } at arbitrary depth
                     depth = 1
@@ -149,14 +152,17 @@ def _normalize_eval_at_scripts(expr: str) -> str:
                     k += 1
                     while k < len(expr) and expr[k].isalpha():
                         k += 1
-                    # Consume any following brace groups (e.g. \frac{1}{2})
-                    while k < len(expr) and expr[k] == '{':
+                    # Consume optional [...] and following {…} groups
+                    # (e.g. \sqrt[3]{2}, \frac{1}{2})
+                    while k < len(expr) and expr[k] in '[{':
+                        close = ']' if expr[k] == '[' else '}'
+                        opener = expr[k]
                         depth = 1
                         k += 1
                         while k < len(expr) and depth > 0:
-                            if expr[k] == '{':
+                            if expr[k] == opener:
                                 depth += 1
-                            elif expr[k] == '}':
+                            elif expr[k] == close:
                                 depth -= 1
                             k += 1
                     scripts[script_type] = '{' + expr[start:k] + '}'

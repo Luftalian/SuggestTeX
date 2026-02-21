@@ -1144,6 +1144,36 @@ class TestAbsMultiline:
         assert_pass(server, "\\left|x +\n y\\right|")
 
 
+class TestEvalAtOptionalArgs:
+    """Round 14: control-seq with optional [...] args must stay grouped."""
+
+    def test_sqrt_with_optional_root(self, server):
+        assert_pass(server, "\\left. f \\right|_\\sqrt[3]{2}")
+
+    def test_sqrt_with_optional_root_superscript(self, server):
+        assert_pass(server, "\\left. f \\right|^\\sqrt[4]{16}")
+
+
+class TestEvalAtSpacedScript:
+    """Round 14: whitespace after _/^ must be skipped in script normalization."""
+
+    def test_spaced_sub_brace(self, server):
+        assert_pass(server, "\\left. f \\right|_ {x=1}")
+
+    def test_spaced_sup_brace(self, server):
+        assert_pass(server, "\\left. f \\right|^ {2}")
+
+
+class TestEvalAtCRLF:
+    """Round 14: CRLF line endings must not break eval-at detection."""
+
+    def test_crlf_before_subscript(self, server):
+        assert_pass(server, "\\left. f \\right|\r\n_{x=1}")
+
+    def test_abs_with_crlf(self, server):
+        assert_pass(server, "\\left|x\r\n\\right|")
+
+
 class TestInnerProductFailure:
     @pytest.mark.xfail(reason="\\langle \\rangle not supported as delimiters")
     def test_inner_product(self, server):
