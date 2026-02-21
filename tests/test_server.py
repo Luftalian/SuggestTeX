@@ -1174,6 +1174,19 @@ class TestEvalAtCRLF:
         assert_pass(server, "\\left|x\r\n\\right|")
 
 
+class TestEvalAtSpacedControlSeqArgs:
+    """Round 15: whitespace between control-seq and args in eval-at scripts."""
+
+    def test_frac_spaced_args(self, server):
+        assert_pass(server, "\\left. f \\right|_\\frac {1}{2}")
+
+    def test_sqrt_spaced_bracket_arg(self, server):
+        assert_pass(server, "\\left. f \\right|_\\sqrt [3]{2}")
+
+    def test_frac_spaced_superscript(self, server):
+        assert_pass(server, "\\left. f \\right|^\\frac {1}{2}")
+
+
 class TestInnerProductFailure:
     @pytest.mark.xfail(reason="\\langle \\rangle not supported as delimiters")
     def test_inner_product(self, server):
@@ -1423,11 +1436,9 @@ class TestUnsupportedCommands:
     def test_mittag_leffler(self, server):
         assert_pass(server, "E_{\\alpha,\\beta}(z)")
 
-    @pytest.mark.xfail(reason="\\cfrac[l] alignment option not supported")
     def test_cfrac_left_aligned(self, server):
         assert_pass(server, "\\cfrac[l]{a}{b+c}")
 
-    @pytest.mark.xfail(reason="\\cfrac[r] alignment option not supported")
     def test_cfrac_right_aligned(self, server):
         assert_pass(server, "\\cfrac[r]{a}{b+c}")
 

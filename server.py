@@ -150,11 +150,22 @@ def _normalize_eval_at_scripts(expr: str) -> str:
                     # Bare control sequence — consume name + brace args
                     start = k
                     k += 1
-                    while k < len(expr) and expr[k].isalpha():
+                    if k < len(expr) and not expr[k].isalpha():
+                        # Non-letter control symbol (\%, \#, etc.) — single char
                         k += 1
+                    else:
+                        while k < len(expr) and expr[k].isalpha():
+                            k += 1
                     # Consume optional [...] and following {…} groups
                     # (e.g. \sqrt[3]{2}, \frac{1}{2})
-                    while k < len(expr) and expr[k] in '[{':
+                    # LaTeX allows whitespace between command and args
+                    while True:
+                        tmp = k
+                        while tmp < len(expr) and expr[tmp] in WS:
+                            tmp += 1
+                        if tmp >= len(expr) or expr[tmp] not in '[{':
+                            break
+                        k = tmp
                         close = ']' if expr[k] == '[' else '}'
                         opener = expr[k]
                         depth = 1
@@ -258,8 +269,8 @@ def preprocess_latex(expr: str) -> str:
     # 4. Strip empty leading groups:  {}_x → _x ,  {}^x → ^x
     expr = re.sub(r"\{\}(?=[_^])", "", expr)
 
-    # 5. \cfrac → \frac (allow optional whitespace; lookahead for { or digit)
-    expr = re.sub(r"\\cfrac\s*(?=[{\d\[])", r"\\frac", expr)
+    # 5. \cfrac → \frac (strip optional [l]/[r] alignment; lookahead for { or digit)
+    expr = re.sub(r"\\cfrac\s*(?:\[.\])?\s*(?=[{\d])", r"\\frac", expr)
 
     return expr.strip()
 
